@@ -343,7 +343,7 @@ export const modalTemplate = `
                         <div class="form-text mb-2 text-muted small">
                             复选框为启用对应直播源，单选框为在启用的直播源中选择一个默认的直播源
                         </div>
-                        <div class="list-group" id="source-list-container">
+                        <div class="list-group" id="source-list-container" style="max-height: 300px; overflow-y: auto;">
                             <div v-for="(source, idx) in channelForm.sources" :key="source._id" class="list-group-item source-row d-flex align-items-center gap-2">
                                 <span class="source-drag-handle text-secondary fs-5">⠿</span>
                                 <div class="form-check" title="是否启用该源">
@@ -421,7 +421,7 @@ export const modalTemplate = `
                             <span>📅 EPG 来源 (支持多选/排序)</span>
                             <button class="btn btn-sm btn-outline-primary" @click="addEpg">+ 添加 EPG 源</button>
                         </label>
-                        <div class="list-group" id="epg-list-container">
+                        <div class="list-group" id="epg-list-container" style="max-height: 300px; overflow-y: auto;">
                             <div v-for="(item, idx) in settings.epgs" :key="item._id" class="list-group-item d-flex align-items-center gap-2">
                                 <span class="epg-drag-handle text-secondary fs-5" style="cursor: grab;">⠿</span>
                                 <div class="form-check">
