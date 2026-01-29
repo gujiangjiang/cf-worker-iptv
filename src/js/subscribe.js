@@ -5,6 +5,26 @@
 
 import { corsHeaders, errorResponse } from './utils.js';
 
+// 检查订阅权限辅助函数
+function checkSubAuth(settings, urlParams, env, format) {
+    const guestConfig = settings?.guestConfig || { allowSub: true, allowFormats: ['m3u', 'txt'] };
+    
+    // 1. 如果允许访客订阅，且格式在允许列表中 -> 通过
+    const formatAllowed = guestConfig.allowFormats ? guestConfig.allowFormats.includes(format) : true;
+    
+    if (guestConfig.allowSub && formatAllowed) {
+        return true;
+    }
+
+    // 2. 如果不允许，检查 URL 参数中的 pwd 是否匹配密码
+    const pwd = urlParams.get("pwd");
+    if (pwd && pwd === env.PASSWORD) {
+        return true;
+    }
+
+    return false;
+}
+
 // 导出 M3U 格式
 export async function handleM3uExport(request, env) {
     try {
@@ -17,6 +37,11 @@ export async function handleM3uExport(request, env) {
             env.IPTV_KV.get("settings", { type: "json" }),
             env.IPTV_KV.get("groups", { type: "json" })
         ]);
+
+        // 权限检查
+        if (!checkSubAuth(settings, url.searchParams, env, 'm3u')) {
+            return errorResponse("Access Denied: Guest subscription is disabled.", 403);
+        }
 
         if (!channels || !Array.isArray(channels)) return new Response("#EXTM3U", { headers: corsHeaders });
 
@@ -112,10 +137,18 @@ export async function handleM3uExport(request, env) {
 // 导出 TXT 格式
 export async function handleTxtExport(request, env) {
     try {
-        const [data, groupsList] = await Promise.all([
+        const url = new URL(request.url);
+
+        const [data, groupsList, settings] = await Promise.all([
             env.IPTV_KV.get("channels", { type: "json" }),
-            env.IPTV_KV.get("groups", { type: "json" })
+            env.IPTV_KV.get("groups", { type: "json" }),
+            env.IPTV_KV.get("settings", { type: "json" })
         ]);
+
+        // 权限检查
+        if (!checkSubAuth(settings, url.searchParams, env, 'txt')) {
+             return errorResponse("Access Denied: Guest subscription is disabled.", 403);
+        }
 
         if (!data || !Array.isArray(data)) return new Response("", { headers: corsHeaders });
 
@@ -141,7 +174,6 @@ export async function handleTxtExport(request, env) {
         const otherGroups = Object.keys(groupsMap).filter(g => !knownSet.has(g));
         
         // 将剩余分组追加到最后 (默认分组会在这里面)
-        // 我们可以稍微优化一下，把 '默认' 显式放到最后，其他未知的放在中间
         const defaultGroupIndex = otherGroups.indexOf('默认');
         if (defaultGroupIndex > -1) {
             otherGroups.splice(defaultGroupIndex, 1); // 移除默认

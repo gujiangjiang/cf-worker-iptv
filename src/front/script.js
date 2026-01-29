@@ -21,10 +21,14 @@ export const jsContent = `
             }
         },
         mounted() {
+            // 初始化：检查是否已登录，或是否允许访客查看
             const savedPwd = localStorage.getItem('iptv_pwd');
             if(savedPwd) {
                 this.password = savedPwd;
                 this.login();
+            } else {
+                // 如果没有保存密码，则初始化访客模式 (拉取配置)
+                this.initGuest();
             }
         },
         methods: {

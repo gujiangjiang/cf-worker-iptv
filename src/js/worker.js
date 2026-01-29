@@ -26,8 +26,12 @@ export default {
                 headers: { "Content-Type": "text/html;charset=UTF-8" },
             });
 
+        case "/api/guest/config":
+             // API: 获取访客配置 (无需鉴权)
+            return api.handleGetGuestConfig(request, env);
+
         case "/api/list":
-            // API: 获取频道列表
+            // API: 获取频道列表 (内部包含鉴权或访客检查)
             return api.handleList(request, env);
 
         case "/api/save":

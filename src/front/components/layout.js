@@ -12,28 +12,39 @@ export const layoutTemplate = `
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h3>📺 IPTV 直播源管理</h3>
         
-        <div class="dropdown">
-            <button class="btn btn-outline-primary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                📡 订阅 / 导出
-            </button>
-            <ul class="dropdown-menu">
-                <li><a class="dropdown-item" :href="baseUrl + '/m3u'" target="_blank">📄 标准 M3U (单源)</a></li>
-                <li><a class="dropdown-item" :href="baseUrl + '/m3u?mode=multi'" target="_blank">📑 多源 M3U (同名多源)</a></li>
-                <li><hr class="dropdown-divider"></li>
-                <li><a class="dropdown-item" :href="baseUrl + '/txt'" target="_blank">📝 TXT 格式</a></li>
-            </ul>
+        <div class="d-flex gap-2">
+            <div class="dropdown">
+                <button class="btn btn-outline-primary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                    📡 订阅 / 导出
+                </button>
+                <ul class="dropdown-menu">
+                    <li><a class="dropdown-item" :href="baseUrl + '/m3u' + (isAuth && !settings.guestConfig.allowSub ? '?pwd='+password : '')" target="_blank">📄 标准 M3U (单源)</a></li>
+                    <li><a class="dropdown-item" :href="baseUrl + '/m3u?mode=multi' + (isAuth && !settings.guestConfig.allowSub ? '&pwd='+password : '')" target="_blank">📑 多源 M3U (同名多源)</a></li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li><a class="dropdown-item" :href="baseUrl + '/txt' + (isAuth && !settings.guestConfig.allowSub ? '?pwd='+password : '')" target="_blank">📝 TXT 格式</a></li>
+                </ul>
+            </div>
+            
+            <button v-if="!isAuth" class="btn btn-dark" @click="openLoginModal">🔐 后台管理</button>
+            
+            <button v-if="isAuth" class="btn btn-secondary" @click="openSystemSettings" title="系统设置">🛠️ 系统设置</button>
+            <button v-if="isAuth" class="btn btn-outline-danger" @click="logout" title="退出登录">退出</button>
         </div>
     </div>
 
-    <div v-if="!isAuth" class="card p-4 shadow-sm" style="max-width: 400px; margin: 0 auto;">
-        <div class="mb-3"><label class="form-label">访问密码</label><input type="password" class="form-control" v-model="password" @keyup.enter="login"></div>
-        <button class="btn btn-primary w-100" @click="login">进入管理</button>
+    <div v-if="!isAuth && !publicGuestConfig.allowViewList" class="card p-5 text-center shadow-sm">
+        <div class="mb-3 display-1 text-muted">🔒</div>
+        <h3>私有系统</h3>
+        <p class="text-muted">当前系统未开放访客查看权限，请登录后台进行管理。</p>
+        <div class="mt-3">
+            <button class="btn btn-primary" @click="openLoginModal">管理员登录</button>
+        </div>
     </div>
 
     <div v-else>
-        <button class="btn btn-primary floating-save-btn position-fixed bottom-0 end-0 m-4" @click="saveData" title="保存">💾</button>
+        <button v-if="isAuth" class="btn btn-primary floating-save-btn position-fixed bottom-0 end-0 m-4" @click="saveData" title="保存">💾</button>
 
-        <div class="card p-3 mb-4 shadow-sm">
+        <div v-if="isAuth" class="card p-3 mb-4 shadow-sm">
             <div class="row g-3">
                 <div class="col-12 d-flex justify-content-between align-items-center">
                         <h5 class="mb-0">快捷操作</h5>
@@ -54,7 +65,7 @@ export const layoutTemplate = `
         <div class="card shadow-sm">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <span>频道列表 ({{ channels.length }})</span>
-                <button class="btn btn-sm btn-primary" @click="openAddChannelModal">+ 新增频道</button>
+                <button v-if="isAuth" class="btn btn-sm btn-primary" @click="openAddChannelModal">+ 新增频道</button>
             </div>
             <div class="card-body p-0">
                 <div class="table-responsive">
@@ -67,12 +78,14 @@ export const layoutTemplate = `
                                 <th style="width: 20%">显示名称</th>
                                 <th style="width: 10%">Logo</th>
                                 <th style="width: 25%">直播源概览</th>
-                                <th style="width: 15%" class="text-center">操作</th>
+                                <th v-if="isAuth" style="width: 15%" class="text-center">操作</th>
                             </tr>
                         </thead>
                         <tbody id="channel-list">
                             <tr v-for="(item, index) in channels" :key="item.id" class="channel-row">
-                                <td class="text-center cursor-move drag-handle"><span class="text-secondary">⠿</span></td>
+                                <td :class="['text-center', isAuth ? 'cursor-move drag-handle' : '']">
+                                    <span class="text-secondary">{{ index + 1 }}</span>
+                                </td>
                                 <td><span class="badge bg-light text-dark border">{{ item.group }}</span></td>
                                 <td class="text-muted small">{{ item.tvgName }}</td>
                                 <td class="fw-bold">{{ item.name }}</td>
@@ -86,7 +99,7 @@ export const layoutTemplate = `
                                         <small class="text-muted">共 {{ item.sources.length }} 个</small>
                                     </div>
                                 </td>
-                                <td class="text-center">
+                                <td v-if="isAuth" class="text-center">
                                     <button class="btn btn-sm btn-outline-primary me-2" @click="openEditChannelModal(index)">编辑</button>
                                     <button class="btn btn-sm btn-outline-danger" @click="openConfirmModal('deleteChannel', index)">删除</button>
                                 </td>

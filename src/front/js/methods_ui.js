@@ -2,7 +2,7 @@
  * 前端 UI 交互逻辑模块
  */
 export const uiMethods = `
-    // 辅助：生成唯一ID (重复定义以确保独立性，或在 importMethods 中复用)
+    // 辅助：生成唯一ID
     generateId() {
         return Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
     },
@@ -15,10 +15,13 @@ export const uiMethods = `
         this.toastTimer = setTimeout(() => { this.toast.show = false; }, 3000);
     },
 
-    // 首页列表排序
+    // 首页列表排序 (只在有拖拽句柄时初始化)
     initSortable() {
         const el = document.getElementById('channel-list');
         if (!el) return;
+        // 如果未登录，不初始化拖拽
+        if (!this.isAuth) return; 
+
         if (this.sortableInstance) this.sortableInstance.destroy();
         this.sortableInstance = Sortable.create(el, {
             handle: '.drag-handle',
@@ -62,8 +65,6 @@ export const uiMethods = `
                 const item = this.groups[evt.oldIndex];
                 this.groups.splice(evt.oldIndex, 1);
                 this.groups.splice(evt.newIndex, 0, item);
-                
-                // 修改：分组排序变更后，立即重排频道列表
                 this.sortChannelsByGroup();
             }
         });
@@ -86,44 +87,43 @@ export const uiMethods = `
         });
     },
 
-    // 打开分组管理
     openGroupManager() {
         this.modals.groupManager = true;
         this.$nextTick(() => this.initGroupSortable());
     },
+    
+    // 打开系统设置
+    openSystemSettings() {
+        this.modals.systemSettings = true;
+    },
 
-    // 新增：根据分组顺序重排频道列表
+    // 打开登录弹窗
+    openLoginModal() {
+        this.modals.login = true;
+    },
+
     sortChannelsByGroup() {
-        // 建立分组索引映射
         const groupOrder = {};
         this.groups.forEach((g, i) => { groupOrder[g] = i; });
         
         this.channels.sort((a, b) => {
             const gA = a.group || '默认';
             const gB = b.group || '默认';
-            
-            // 策略：默认分组始终排在最后
             const isDefaultA = (gA === '默认');
             const isDefaultB = (gB === '默认');
-            
             if (isDefaultA && isDefaultB) return 0;
-            if (isDefaultA) return 1; // A是默认，往后排
-            if (isDefaultB) return -1; // B是默认，A往前排
-            
-            // 均非默认，按 groups 列表顺序
+            if (isDefaultA) return 1; 
+            if (isDefaultB) return -1; 
             const indexA = groupOrder.hasOwnProperty(gA) ? groupOrder[gA] : 99999;
             const indexB = groupOrder.hasOwnProperty(gB) ? groupOrder[gB] : 99999;
-            
             return indexA - indexB;
         });
     },
 
-    // 获取分组下频道数量
     getGroupCount(groupName) {
         return this.channels.filter(ch => ch.group === groupName).length;
     },
 
-    // 查看分组内的频道列表
     viewGroupChannels(groupName) {
         this.groupViewerData.groupName = groupName;
         this.groupViewerData.list = this.channels
@@ -132,19 +132,15 @@ export const uiMethods = `
         this.modals.groupViewer = true;
     },
 
-    // 修改：不再关闭 groupViewer，直接打开编辑框
     openEditChannelFromViewer(index) {
-        // this.modals.groupViewer = false; // 删除此行，保持查看器开启
         this.openEditChannelModal(index);
     },
 
-    // --- 批量添加频道 ---
     openGroupChannelAdder(groupName) {
         this.groupAdderData.targetGroup = groupName;
         this.groupAdderData.candidates = this.channels
             .map((ch, idx) => ({ idx, name: ch.name, group: ch.group }))
             .filter(ch => ch.group === '默认');
-        
         this.groupAdderData.selectedIndices = [];
         this.modals.groupChannelAdder = true;
     },
@@ -158,7 +154,6 @@ export const uiMethods = `
     saveGroupChannels() {
         const target = this.groupAdderData.targetGroup;
         const count = this.groupAdderData.selectedIndices.length;
-        
         if (count > 0) {
             this.groupAdderData.selectedIndices.forEach(idx => {
                 if(this.channels[idx]) this.channels[idx].group = target;
@@ -166,13 +161,10 @@ export const uiMethods = `
             this.showToast(\`成功将 \${count} 个频道移动到 "\${target}"\`);
             this.sortChannelsByGroup();
         }
-        
         this.modals.groupChannelAdder = false;
     },
 
-    // --- M3U 参数 ---
     openSettingsModal() {
-        // 数据迁移：旧字符串 -> 新对象数组 (补 ID)
         if (this.settings.epgUrl && (!this.settings.epgs || this.settings.epgs.length === 0)) {
             this.settings.epgs = [{ 
                 url: this.settings.epgUrl, 
@@ -182,8 +174,6 @@ export const uiMethods = `
             delete this.settings.epgUrl;
         }
         if (!this.settings.epgs) this.settings.epgs = [];
-        
-        // 确保所有现有 EPG 都有 _id (防止旧数据无ID)
         this.settings.epgs.forEach(e => {
             if(!e._id) e._id = this.generateId();
         });
@@ -205,7 +195,6 @@ export const uiMethods = `
         if (len > 0 && !this.settings.epgs[len - 1].url.trim()) {
             return this.showToast('请先填写当前的 EPG 地址', 'warning');
         }
-        // 新增时带 ID
         this.settings.epgs.push({ 
             url: '', 
             enabled: true,
@@ -225,7 +214,6 @@ export const uiMethods = `
         }
     },
 
-    // --- 频道编辑/新增 ---
     openAddChannelModal() {
         this.editMode = false;
         this.editingIndex = -1;
@@ -233,7 +221,7 @@ export const uiMethods = `
             group: '默认',
             name: '', tvgName: '',
             useLogo: false, logo: '',
-            sources: [] // 初始为空，用户点击添加时会生成带ID的源
+            sources: [] 
         };
         this.logoPreviewUrl = '';
         this.modals.channelEditor = true;
@@ -245,7 +233,6 @@ export const uiMethods = `
         this.editingIndex = index;
         const ch = this.channels[index];
         this.channelForm = JSON.parse(JSON.stringify(ch));
-        // 容错：确保 sources 有 _id
         if(this.channelForm.sources) {
             this.channelForm.sources.forEach(s => {
                 if(!s._id) s._id = this.generateId();
@@ -263,10 +250,9 @@ export const uiMethods = `
         if(!this.channelForm.name) return this.showToast('频道名称不能为空', 'error');
         if(this.channelForm.sources.length === 0) return this.showToast('至少需要一个直播源', 'error');
         
-        // 构造数据时保留 id
         const channelData = {
             ...this.channelForm,
-            id: this.editMode ? this.channels[this.editingIndex].id : this.generateId(), // 确保 ID
+            id: this.editMode ? this.channels[this.editingIndex].id : this.generateId(), 
             tvgName: this.channelForm.tvgName || this.channelForm.name,
             logo: this.channelForm.useLogo ? this.channelForm.logo : ''
         };
@@ -293,13 +279,11 @@ export const uiMethods = `
         }
     },
 
-    // --- 直播源管理 ---
     addSource() {
         const len = this.channelForm.sources.length;
         if (len > 0 && !this.channelForm.sources[len - 1].url.trim()) {
             return this.showToast('请先填写当前的直播源链接', 'warning');
         }
-        // 新增时带 ID
         this.channelForm.sources.push({ 
             url: '', 
             enabled: true, 
@@ -311,7 +295,6 @@ export const uiMethods = `
         }
     },
     
-    // 统一的确认弹窗触发器
     openConfirmModal(actionType, index = -1) {
         this.confirmModal.actionType = actionType;
         this.confirmModal.targetIndex = index;
@@ -325,13 +308,11 @@ export const uiMethods = `
                 this.confirmModal.title = '确认删除源';
                 this.confirmModal.message = '确定要删除这个直播源吗？';
                 break;
-            
             case 'deleteChannel':
                 const chName = this.channels[index]?.name || '未知';
                 this.confirmModal.title = '确认删除频道';
                 this.confirmModal.message = \`确定要删除频道 "\${chName}" 吗？\`;
                 break;
-            
             case 'deleteGroup':
                 const groupName = this.groups[index];
                 const count = this.channels.filter(c => c.group === groupName).length;
@@ -342,13 +323,11 @@ export const uiMethods = `
                 }
                 this.confirmModal.message = msg;
                 break;
-
             case 'clearAll':
                 this.confirmModal.title = '⚠️ 危险操作警告';
                 this.confirmModal.message = '此操作将清空所有频道且无法恢复！请输入管理密码确认：';
                 this.confirmModal.requirePassword = true;
                 break;
-                
             default:
                 this.confirmModal.show = false;
                 break;
@@ -368,8 +347,6 @@ export const uiMethods = `
         else if (actionType === 'deleteChannel') {
             this.channels.splice(targetIndex, 1);
             this.showToast('频道已删除');
-            
-            // 修复：在分组查看器中删除频道后，也要刷新查看器
             if (this.modals.groupViewer) {
                 this.viewGroupChannels(this.groupViewerData.groupName);
             }
@@ -379,7 +356,6 @@ export const uiMethods = `
             this.channels.forEach(ch => { if(ch.group === groupName) ch.group = '默认'; });
             this.groups.splice(targetIndex, 1);
             this.showToast('分组已删除');
-            // 修改：分组删除后，频道归入默认，需要重排
             this.sortChannelsByGroup();
         }
         else if (actionType === 'clearAll') {
@@ -406,14 +382,12 @@ export const uiMethods = `
         });
     },
 
-    // --- 分组管理 ---
     addGroup() {
         const val = this.newGroupInput.trim();
         if(!val) return;
         if(this.groups.includes(val)) return this.showToast('分组已存在', 'error');
         this.groups.push(val);
         this.newGroupInput = '';
-        // 修改：新增分组虽然暂时没有频道，但保持同步是个好习惯
         this.sortChannelsByGroup();
     },
     

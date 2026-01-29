@@ -3,15 +3,30 @@
  */
 export const dataContent = `
     isAuth: false,
-    password: '',
+    password: '', // 用户输入的密码
     channels: [],
     groups: [],
+    
+    // 全局设置 (包含访客配置)
     settings: {
-        epgs: [], // 修改：改为对象数组 [{ url: '', enabled: true }]
+        epgs: [], // [{ url: '', enabled: true }]
         catchup: '',
-        catchupSource: ''
+        catchupSource: '',
+        guestConfig: {
+            allowViewList: false, // 是否允许未登录查看列表
+            allowSub: true,       // 是否允许未登录订阅
+            allowFormats: ['m3u', 'txt'] // 允许的格式
+        }
     },
-    catchupMode: 'custom', // 新增：回看规则模式 (append, timestamp, custom)
+    
+    // 访客状态 (未登录时从服务端获取的配置)
+    publicGuestConfig: {
+        allowViewList: false,
+        allowSub: true,
+        allowFormats: ['m3u', 'txt']
+    },
+
+    catchupMode: 'custom', 
 
     toast: { show: false, message: '', type: 'success' },
     toastTimer: null,
@@ -21,14 +36,16 @@ export const dataContent = `
     sortableInstance: null,
     sourceSortableInstance: null,
     groupSortableInstance: null,
-    epgSortableInstance: null, // 新增：EPG 列表排序实例
+    epgSortableInstance: null,
 
     modals: {
-        settings: false,
+        login: false,           // 新增：登录弹窗
+        systemSettings: false,  // 新增：系统设置弹窗
+        settings: false,        // (原M3U参数设置，为了区分建议改名，但保持兼容暂时不变，UI上叫 "M3U 参数")
         channelEditor: false,
         groupManager: false,
         groupChannelAdder: false,
-        groupViewer: false       // 新增：分组频道查看器
+        groupViewer: false
     },
 
     // 批量添加频道数据状态
@@ -41,7 +58,7 @@ export const dataContent = `
     // 分组频道查看器数据
     groupViewerData: {
         groupName: '',
-        list: [] // { name, url, ... }
+        list: [] 
     },
 
     // 通用确认模态框状态
@@ -49,25 +66,25 @@ export const dataContent = `
         show: false,
         title: '',
         message: '',
-        type: 'info', // 'info' | 'danger'
-        actionType: '', // 'deleteSource' | 'deleteChannel' | 'clearAll'
+        type: 'info', 
+        actionType: '', 
         targetIndex: -1,
-        inputPassword: '', // 清空列表时验证用
+        inputPassword: '', 
         requirePassword: false
     },
 
     // 频道编辑表单
-    editMode: false, // false=新增, true=编辑
+    editMode: false, 
     editingIndex: -1,
     channelForm: {
         group: '默认',
         name: '',
         tvgName: '',
-        useLogo: false, // 是否使用 Logo
+        useLogo: false, 
         logo: '',
-        sources: [] // { url: '', enabled: true, isPrimary: false }
+        sources: [] 
     },
-    logoPreviewUrl: '', // Logo 预览地址
+    logoPreviewUrl: '', 
     
     newGroupInput: '',
     

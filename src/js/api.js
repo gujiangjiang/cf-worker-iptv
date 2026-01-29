@@ -5,9 +5,33 @@
 
 import { checkAuth, corsHeaders, jsonResponse, errorResponse } from './utils.js';
 
+// 获取访客配置 (无需鉴权，只返回必要的公共信息)
+export async function handleGetGuestConfig(request, env) {
+    try {
+        const settings = await env.IPTV_KV.get("settings", { type: "json" }) || {};
+        const guestConfig = settings.guestConfig || {
+            allowViewList: false, // 默认禁止访客看列表
+            allowSub: true,       // 默认允许订阅 (兼容旧版行为)
+            allowFormats: ['m3u', 'txt']
+        };
+        return jsonResponse(guestConfig);
+    } catch (e) {
+        return errorResponse("Internal Server Error", 500);
+    }
+}
+
 // 获取频道列表
 export async function handleList(request, env) {
-    if (!checkAuth(request, env)) return errorResponse("Unauthorized", 401);
+    const isAuth = checkAuth(request, env);
+    
+    // 如果未登录，检查是否允许访客查看
+    if (!isAuth) {
+        const settings = await env.IPTV_KV.get("settings", { type: "json" }) || {};
+        const guestConfig = settings.guestConfig || { allowViewList: false };
+        if (!guestConfig.allowViewList) {
+            return errorResponse("Unauthorized / Guest View Disabled", 401);
+        }
+    }
     
     try {
         const data = await env.IPTV_KV.get("channels", { type: "json" });
@@ -30,7 +54,7 @@ export async function handleSave(request, env) {
     }
 }
 
-// 获取全局配置
+// 获取全局配置 (包含访客设置等敏感信息，需要鉴权)
 export async function handleGetSettings(request, env) {
     if (!checkAuth(request, env)) return errorResponse("Unauthorized", 401);
     try {
@@ -46,6 +70,10 @@ export async function handleSaveSettings(request, env) {
     if (!checkAuth(request, env)) return errorResponse("Unauthorized", 401);
     try {
         const body = await request.json();
+        // 简单的校验
+        if (body.guestConfig && typeof body.guestConfig !== 'object') {
+             return errorResponse("Invalid Guest Config", 400);
+        }
         await env.IPTV_KV.put("settings", JSON.stringify(body));
         return new Response("Settings Saved", { headers: corsHeaders });
     } catch (e) {

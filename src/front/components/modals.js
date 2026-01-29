@@ -1,8 +1,75 @@
 /**
  * 组件：模态框集合
- * 包含：二次确认、频道编辑、分组管理、批量添加、全局设置、冲突处理、分组查看
+ * 包含：二次确认、频道编辑、分组管理、批量添加、全局设置、冲突处理、分组查看、系统设置、登录
  */
 export const modalTemplate = `
+    <div v-if="modals.login" class="modal-overlay" style="z-index: 2000;">
+        <div class="modal-dialog" style="max-width: 400px;">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">🔐 后台管理登录</h5>
+                    <button type="button" class="btn-close" @click="modals.login = false"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">访问密码</label>
+                        <input type="password" class="form-control" v-model="password" @keyup.enter="login" placeholder="请输入管理员密码" autofocus>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-primary w-100" @click="login" :disabled="loading">{{ loading ? '登录中...' : '进入系统' }}</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div v-if="modals.systemSettings" class="modal-overlay" style="z-index: 1070;" @click.self="modals.systemSettings = false">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">🛠️ 系统设置</h5>
+                    <button type="button" class="btn-close" @click="modals.systemSettings = false"></button>
+                </div>
+                <div class="modal-body">
+                    <h6 class="border-bottom pb-2 mb-3">👤 访客权限控制</h6>
+                    
+                    <div class="form-check form-switch mb-3">
+                        <input class="form-check-input" type="checkbox" id="allowViewList" v-model="settings.guestConfig.allowViewList">
+                        <label class="form-check-label" for="allowViewList">
+                            允许访客查看频道列表
+                            <div class="form-text small">开启后，未登录用户也可以看到所有频道，但无法编辑。</div>
+                        </label>
+                    </div>
+
+                    <div class="form-check form-switch mb-3">
+                        <input class="form-check-input" type="checkbox" id="allowSub" v-model="settings.guestConfig.allowSub">
+                        <label class="form-check-label" for="allowSub">
+                            允许访客订阅直播源 (导出)
+                            <div class="form-text small">关闭后，所有导出链接将强制需要密码参数 (?pwd=xxxx)。</div>
+                        </label>
+                    </div>
+
+                    <div class="mb-3" v-if="settings.guestConfig.allowSub">
+                        <label class="form-label">允许访客导出的格式</label>
+                        <div class="d-flex gap-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" value="m3u" v-model="settings.guestConfig.allowFormats">
+                                <label class="form-check-label">M3U / 多源</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" value="txt" v-model="settings.guestConfig.allowFormats">
+                                <label class="form-check-label">TXT</label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-primary" @click="modals.systemSettings = false">确定</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div v-if="confirmModal.show" class="confirm-modal-overlay">
         <div class="modal-dialog" style="min-width: 350px;">
             <div class="modal-content">
@@ -70,7 +137,7 @@ export const modalTemplate = `
                             <li v-for="(ch, idx) in groupViewerData.list" :key="idx" class="list-group-item d-flex align-items-center">
                                 <span class="text-truncate flex-grow-1 me-2" :title="ch.name">{{ ch.name }}</span>
                                 <span class="badge bg-light text-dark flex-shrink-0 border me-2">{{ ch.sources.length }}个源</span>
-                                <button class="btn btn-sm btn-outline-primary border-0" @click="openEditChannelFromViewer(ch.originalIndex)" title="编辑频道">✏️</button>
+                                <button v-if="isAuth" class="btn btn-sm btn-outline-primary border-0" @click="openEditChannelFromViewer(ch.originalIndex)" title="编辑频道">✏️</button>
                             </li>
                         </ul>
                     </div>
