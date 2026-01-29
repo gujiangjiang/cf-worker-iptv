@@ -117,6 +117,7 @@ export const importLogic = `
         });
         if(groupsAdded > 0) this.groups = Array.from(newGroups);
 
+        // 1. 内部合并：新导入数据自身的去重
         const uniqueNewChannels = [];
         const tempMap = new Map();
         
@@ -142,17 +143,27 @@ export const importLogic = `
 
         if (internalMergeCount > 0) this.showToast(\`导入文件中自动合并了 \${internalMergeCount} 个同名频道\`, 'success');
 
+        // 2. 准备现有数据索引 (精确匹配用)
         const existingMap = new Map(); 
         this.channels.forEach((ch, index) => {
             const key = this.cleanChannelName(ch.name); 
             if(key) existingMap.set(key, { index, id: ch.id });
         });
 
+        // 3. 性能优化：预先缓存现有频道的"清洗名称"，避免在循环中重复计算 (O(N) 预处理)
+        const cachedExistingChannels = this.channels.map(ch => ({
+            original: ch,
+            cleanName: this.cleanChannelName(ch.name)
+        })).filter(item => item.cleanName);
+
         const conflicts = []; 
         const safeToAdd = []; 
 
+        // 4. 对比新旧数据
         uniqueNewChannels.forEach(newCh => {
             const key = this.cleanChannelName(newCh.name) || this.normalizeName(newCh.name);
+            
+            // A. 精确匹配
             if (existingMap.has(key)) {
                 const { index: existingIndex, id: existingId } = existingMap.get(key);
                 const existingChannel = this.channels[existingIndex];
@@ -170,13 +181,17 @@ export const importLogic = `
                 }
                 return;
             }
+
+            // B. 模糊匹配 (优化版：使用 cachedExistingChannels)
             let fuzzyTarget = null;
             const cleanNewKey = key;
-            const cleanKeyMatchIndex = this.channels.findIndex(ch => {
-                const existingClean = this.cleanChannelName(ch.name);
-                if (!existingClean) return false;
-                if (existingClean === cleanNewKey) return true;
+            
+            const cleanKeyMatchItem = cachedExistingChannels.find(cached => {
+                const existingClean = cached.cleanName;
+                if (existingClean === cleanNewKey) return true; // 理论上前面 Map 已经拦截了，但以防万一
+                
                 if (cleanNewKey.length <= 1 || existingClean.length <= 1) return false; 
+                
                 let longStr, shortStr;
                 if (existingClean.includes(cleanNewKey)) {
                     longStr = existingClean;
@@ -187,14 +202,17 @@ export const importLogic = `
                 } else {
                     return false;
                 }
+                
+                // 检查包含位置后一位是否为数字 (防止 CCTV1 匹配 CCTV11)
                 const matchIndex = longStr.indexOf(shortStr);
                 const nextChar = longStr[matchIndex + shortStr.length];
                 if (nextChar && /\\d/.test(nextChar)) return false;
+                
                 return true;
             });
 
-            if (cleanKeyMatchIndex > -1) {
-                fuzzyTarget = this.channels[cleanKeyMatchIndex];
+            if (cleanKeyMatchItem) {
+                fuzzyTarget = cleanKeyMatchItem.original;
                 conflicts.push({
                     newItem: newCh,
                     existingId: fuzzyTarget.id,
