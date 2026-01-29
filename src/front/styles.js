@@ -3,7 +3,27 @@
  */
 export const cssContent = `
     body { background-color: #f8f9fa; }
-    .container { max-width: 1300px; margin-top: 30px; }
+    
+    /* 调整布局：移除 margin-top，改用 padding-top 撑开顶部空间 */
+    .container { max-width: 1300px; }
+    #app { padding-top: 85px; } 
+
+    /* 新增：固定页眉样式 */
+    .fixed-header {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 70px;
+        background-color: rgba(248, 249, 250, 0.90); /* 微透明背景 */
+        backdrop-filter: blur(10px); /* 毛玻璃特效 */
+        box-shadow: 0 1px 10px rgba(0,0,0,0.08);
+        z-index: 1030; /* 层级高于内容，低于 Modal/Toast */
+        display: flex;
+        align-items: center;
+        transition: all 0.3s ease;
+    }
+
     .drag-handle { cursor: grab; user-select: none; }
     .drag-handle:active { cursor: grabbing; }
     .sortable-ghost { background-color: #e9ecef !important; opacity: 0.5; }

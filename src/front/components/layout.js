@@ -9,40 +9,42 @@ export const layoutTemplate = `
         </div>
     </div>
 
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h3>📺 IPTV 直播源管理</h3>
-        
-        <div class="d-flex gap-2">
-            <div class="dropdown" v-if="isAuth || publicGuestConfig.allowSub">
-                <button class="btn btn-outline-primary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                    📡 订阅 / 导出
-                </button>
-                <ul class="dropdown-menu">
-                    <li v-if="isAuth || (publicGuestConfig.allowSub && publicGuestConfig.allowFormats.includes('m3u'))">
-                        <a class="dropdown-item" 
-                           :href="baseUrl + '/m3u' + ( (!publicGuestConfig.allowSub) ? '?pwd=' + (settings.subPassword || password) : '' )" 
-                           target="_blank">📄 标准 M3U (单源)</a>
-                    </li>
-                    <li v-if="isAuth || (publicGuestConfig.allowSub && publicGuestConfig.allowFormats.includes('m3u'))">
-                        <a class="dropdown-item" 
-                           :href="baseUrl + '/m3u?mode=multi' + ( (!publicGuestConfig.allowSub) ? '&pwd=' + (settings.subPassword || password) : '' )" 
-                           target="_blank">📑 多源 M3U (同名多源)</a>
-                    </li>
-                    
-                    <li v-if="isAuth || (publicGuestConfig.allowSub && publicGuestConfig.allowFormats.includes('m3u') && publicGuestConfig.allowFormats.includes('txt'))"><hr class="dropdown-divider"></li>
-                    
-                    <li v-if="isAuth || (publicGuestConfig.allowSub && publicGuestConfig.allowFormats.includes('txt'))">
-                        <a class="dropdown-item" 
-                           :href="baseUrl + '/txt' + ( (!publicGuestConfig.allowSub) ? '?pwd=' + (settings.subPassword || password) : '' )" 
-                           target="_blank">📝 TXT 格式</a>
-                    </li>
-                </ul>
+    <div class="fixed-header">
+        <div class="container d-flex justify-content-between align-items-center">
+            <h3 class="m-0 fs-4">📺 IPTV 直播源管理</h3>
+            
+            <div class="d-flex gap-2">
+                <div class="dropdown" v-if="isAuth || publicGuestConfig.allowSub">
+                    <button class="btn btn-outline-primary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                        📡 订阅 / 导出
+                    </button>
+                    <ul class="dropdown-menu">
+                        <li v-if="isAuth || (publicGuestConfig.allowSub && publicGuestConfig.allowFormats.includes('m3u'))">
+                            <a class="dropdown-item" 
+                               :href="baseUrl + '/m3u' + ( (!publicGuestConfig.allowSub) ? '?pwd=' + (settings.subPassword || password) : '' )" 
+                               target="_blank">📄 标准 M3U (单源)</a>
+                        </li>
+                        <li v-if="isAuth || (publicGuestConfig.allowSub && publicGuestConfig.allowFormats.includes('m3u'))">
+                            <a class="dropdown-item" 
+                               :href="baseUrl + '/m3u?mode=multi' + ( (!publicGuestConfig.allowSub) ? '&pwd=' + (settings.subPassword || password) : '' )" 
+                               target="_blank">📑 多源 M3U (同名多源)</a>
+                        </li>
+                        
+                        <li v-if="isAuth || (publicGuestConfig.allowSub && publicGuestConfig.allowFormats.includes('m3u') && publicGuestConfig.allowFormats.includes('txt'))"><hr class="dropdown-divider"></li>
+                        
+                        <li v-if="isAuth || (publicGuestConfig.allowSub && publicGuestConfig.allowFormats.includes('txt'))">
+                            <a class="dropdown-item" 
+                               :href="baseUrl + '/txt' + ( (!publicGuestConfig.allowSub) ? '?pwd=' + (settings.subPassword || password) : '' )" 
+                               target="_blank">📝 TXT 格式</a>
+                        </li>
+                    </ul>
+                </div>
+                
+                <button v-if="!isAuth" class="btn btn-dark" @click="openLoginModal">🔐 后台管理</button>
+                
+                <button v-if="isAuth" class="btn btn-secondary" @click="openSystemSettings" title="系统设置">🛠️ 系统设置</button>
+                <button v-if="isAuth" class="btn btn-outline-danger" @click="logout" title="退出登录">退出</button>
             </div>
-            
-            <button v-if="!isAuth" class="btn btn-dark" @click="openLoginModal">🔐 后台管理</button>
-            
-            <button v-if="isAuth" class="btn btn-secondary" @click="openSystemSettings" title="系统设置">🛠️ 系统设置</button>
-            <button v-if="isAuth" class="btn btn-outline-danger" @click="logout" title="退出登录">退出</button>
         </div>
     </div>
 
