@@ -44,11 +44,18 @@ const html = `
         <div v-else>
             <div class="card p-3 mb-4 shadow-sm">
                 <div class="row g-3">
-                    <div class="col-md-6">
-                        <label class="form-label">导入 M3U 文件</label>
+                    <div class="col-md-5">
+                        <label class="form-label">本地导入 (.m3u)</label>
                         <input type="file" class="form-control" @change="handleFileUpload" accept=".m3u,.m3u8">
                     </div>
-                    <div class="col-md-6 d-flex align-items-end justify-content-end">
+                    <div class="col-md-7">
+                        <label class="form-label">网络导入 (URL)</label>
+                        <div class="input-group">
+                            <input type="text" class="form-control" v-model="importUrl" placeholder="粘贴 M3U 链接...">
+                            <button class="btn btn-primary" @click="handleUrlImport">导入</button>
+                        </div>
+                    </div>
+                    <div class="col-12 d-flex justify-content-end border-top pt-3 mt-3">
                          <button class="btn btn-danger me-2" @click="clearAll">清空列表</button>
                          <button class="btn btn-success" @click="saveData">💾 保存更改到云端</button>
                     </div>
@@ -104,6 +111,7 @@ const html = `
                     password: '',
                     channels: [],
                     loading: false,
+                    importUrl: '',
                     baseUrl: window.location.origin
                 }
             },
@@ -140,10 +148,37 @@ const html = `
                     const reader = new FileReader();
                     reader.onload = (e) => {
                         this.parseM3U(e.target.result);
+                        event.target.value = '';
                     };
                     reader.readAsText(file);
                 },
+                async handleUrlImport() {
+                    if (!this.importUrl) return alert('请输入有效的 URL');
+                    this.loading = true;
+                    try {
+                        const res = await fetch('/api/fetch-m3u', {
+                            method: 'POST',
+                            headers: { 
+                                'Content-Type': 'application/json',
+                                'Authorization': this.password
+                            },
+                            body: JSON.stringify({ url: this.importUrl })
+                        });
+                        
+                        if (res.ok) {
+                            const text = await res.text();
+                            this.parseM3U(text);
+                            this.importUrl = '';
+                        } else {
+                            alert('导入失败，服务器返回错误: ' + res.statusText);
+                        }
+                    } catch (e) {
+                        alert('网络请求出错，请检查链接或稍后重试');
+                    }
+                    this.loading = false;
+                },
                 parseM3U(content) {
+                    if (!content) return;
                     const lines = content.split('\\n');
                     const newChannels = [];
                     let currentInfo = {};
@@ -151,9 +186,8 @@ const html = `
                     lines.forEach(line => {
                         line = line.trim();
                         if (line.startsWith('#EXTINF:')) {
-                            // 解析 EXTINF
                             const infoMatch = line.match(/group-title="(.*?)".*tvg-logo="(.*?)",(.*)/) || 
-                                              line.match(/,(.*)/); // 简单回退匹配
+                                              line.match(/,(.*)/);
                             
                             if (infoMatch) {
                                 currentInfo = {
@@ -163,17 +197,22 @@ const html = `
                                 };
                             }
                         } else if (line && !line.startsWith('#')) {
-                            // 认为是URL
                             if (currentInfo.name) {
                                 newChannels.push({
                                     ...currentInfo,
                                     url: line
                                 });
-                                currentInfo = {}; // 重置
+                                currentInfo = {};
                             }
                         }
                     });
                     
+                    if (newChannels.length === 0) {
+                        alert('未解析到有效频道，请检查文件格式。');
+                        return;
+                    }
+
+                    // 修复：这里内部的模板字符串必须转义 (\` 和 \${)，否则会与外层的 html 字符串冲突
                     if(confirm(\`解析到 \${newChannels.length} 个频道。\\n选择"确定"追加到现有列表，选择"取消"覆盖现有列表。\`) ) {
                          this.channels = [...this.channels, ...newChannels];
                     } else {
@@ -269,6 +308,31 @@ export default {
       return new Response("Saved", { headers: corsHeaders });
     }
 
+    // 新增 API: 代理获取 M3U 内容 (解决前端跨域问题)
+    if (path === "/api/fetch-m3u" && request.method === "POST") {
+      if (!checkAuth(request)) return new Response("Unauthorized", { status: 401, headers: corsHeaders });
+      
+      try {
+        const body = await request.json();
+        const targetUrl = body.url;
+        
+        if (!targetUrl) return new Response("Missing URL", { status: 400 });
+
+        const response = await fetch(targetUrl, {
+            headers: {
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+            }
+        });
+        
+        if (!response.ok) return new Response("Fetch failed", { status: response.status });
+        
+        const text = await response.text();
+        return new Response(text, { headers: corsHeaders });
+      } catch (err) {
+        return new Response(err.message, { status: 500 });
+      }
+    }
+
     // 4. 订阅输出: M3U 格式
     if (path === "/m3u") {
       const data = await env.IPTV_KV.get("channels", { type: "json" });
@@ -289,17 +353,11 @@ export default {
     }
 
     // 5. 订阅输出: TXT 格式 (多源/TVBox格式)
-    // 输出格式：频道名,URL (按分组聚合可以稍微复杂点，这里提供通用格式)
     if (path === "/txt") {
       const data = await env.IPTV_KV.get("channels", { type: "json" });
       if (!data || !Array.isArray(data)) return new Response("", { headers: corsHeaders });
 
-      // 简单的 频道名,URL 格式
       let txtContent = "";
-      // 如果需要按分组输出，逻辑如下：
-      // Group,#genre#
-      // Name,URL
-      
       const groups = {};
       data.forEach(ch => {
         if(!groups[ch.group]) groups[ch.group] = [];
