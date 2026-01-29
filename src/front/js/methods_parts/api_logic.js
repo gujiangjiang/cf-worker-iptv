@@ -89,7 +89,8 @@ export const apiLogic = `
         this.initGuest();
     },
 
-    async saveSettingsOnly() {
+    // 修复：增加 successMsg 参数，支持自定义成功提示语
+    async saveSettingsOnly(successMsg = '设置已保存') {
         this.loading = true;
         try {
             // 修复：添加 returnText: true，防止解析纯文本响应时报错
@@ -98,7 +99,7 @@ export const apiLogic = `
                 body: JSON.stringify(this.settings),
                 returnText: true 
             });
-            this.showToast('系统设置已保存', 'success');
+            this.showToast(successMsg, 'success');
             this.publicGuestConfig = JSON.parse(JSON.stringify(this.settings.guestConfig));
         } catch(e) { 
             this.showToast('保存设置失败: ' + e.message, 'error'); 

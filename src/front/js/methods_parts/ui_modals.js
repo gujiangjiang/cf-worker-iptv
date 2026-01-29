@@ -85,12 +85,12 @@ export const modalMethods = `
         this.showSubPass = false;
     },
     async saveSystemSettingsAndClose() {
-        await this.saveSettingsOnly();
+        await this.saveSettingsOnly('系统设置已保存'); // 传入具体提示
         this.modals.systemSettings = false;
     },
     // 新增：M3U 设置保存并关闭
     async saveM3uSettings() {
-        await this.saveSettingsOnly();
+        await this.saveSettingsOnly('M3U 参数已保存'); // 传入具体提示
         this.modals.settings = false;
     },
     openSettingsModal() {
