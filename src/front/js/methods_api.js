@@ -39,8 +39,11 @@ export const apiMethods = `
     },
 
     // 登录并加载完整数据
-    // 参数 isAutoLogin: 是否为页面加载时的自动登录 (true=不显示Toast, false=显示Toast)
-    async login(isAutoLogin = false) {
+    // arg: 可能为 boolean(true=自动登录) 或 Event对象(手动点击)
+    async login(arg) {
+        // 修复：只有显式传入 true 时才视为自动登录，Event 对象或 undefined 视为手动
+        const isAutoLogin = (arg === true);
+
         if (!this.password) return this.showToast('请输入密码', 'warning');
 
         this.loading = true;
@@ -53,6 +56,7 @@ export const apiMethods = `
             ]);
 
             if(listRes.status === 401 || settingsRes.status === 401) {
+                // 手动登录才提示错误，避免自动登录时一直弹错误
                 if (!isAutoLogin) this.showToast('密码错误', 'error');
                 localStorage.removeItem('iptv_pwd');
             } else {
