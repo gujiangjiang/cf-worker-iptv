@@ -16,8 +16,6 @@ export const importMethods = `
     cleanChannelName(name) {
         if (!name) return '';
         let s = name.toUpperCase();
-        // 去除常见的后缀模式，例如 " 4K", " 8M1080", " FHD", " [测试]"
-        // \\s+ 匹配前面的空格，后面跟特定的技术参数
         s = s.replace(/\\s+\\d+M\\d*/g, ''); // 去除 " 8M", " 8M1080"
         s = s.replace(/\\s+\\d+K/g, '');     // 去除 " 4K", " 8K"
         s = s.replace(/\\s+(F?HD|SD|HEVC|HDR)/g, ''); // 去除 HD, FHD, HDR
@@ -101,7 +99,7 @@ export const importMethods = `
                 let metaPart = line;
                 let namePart = '';
                 const lastComma = line.lastIndexOf(',');
-                const lastQuote = line.lastIndexOf('"'); // 简单的判断，防止逗号在引号内
+                const lastQuote = line.lastIndexOf('"'); 
                 if (lastComma > -1) {
                     metaPart = line.substring(0, lastComma);
                     namePart = line.substring(lastComma + 1).trim();
@@ -163,6 +161,7 @@ export const importMethods = `
 
     processImports(rawChannels) {
         let internalMergeCount = 0;
+        let skippedDuplicateCount = 0; // 新增：统计完全包含被跳过的数量
         
         // 0. 提取新分组
         const newGroups = new Set(this.groups);
@@ -197,7 +196,7 @@ export const importMethods = `
         if (internalMergeCount > 0) this.showToast(\`导入文件中自动合并了 \${internalMergeCount} 个同名频道\`, 'success');
 
         // 2. 构建现有频道映射表
-        const existingMap = new Map(); // key: normalizedName, value: index
+        const existingMap = new Map(); 
         this.channels.forEach((ch, index) => {
             const key = this.normalizeName(ch.name);
             if(key) existingMap.set(key, index);
@@ -208,30 +207,42 @@ export const importMethods = `
 
         uniqueNewChannels.forEach(newCh => {
             const newKey = this.normalizeName(newCh.name);
-            const cleanNewKey = this.cleanChannelName(newCh.name); // 清洗后的 key 用于模糊匹配
+            const cleanNewKey = this.cleanChannelName(newCh.name);
 
             // A. 完全匹配检测
             if (existingMap.has(newKey)) {
-                conflicts.push({
-                    newItem: newCh,
-                    existingIndex: existingMap.get(newKey),
-                    matchType: 'exact',
-                    suggestedName: this.channels[existingMap.get(newKey)].name
-                });
+                const existingIndex = existingMap.get(newKey);
+                const existingChannel = this.channels[existingIndex];
+                
+                // --- 新增逻辑：检测是否为完全子集 ---
+                // 获取现有频道的所有 URL 集合
+                const existingUrls = new Set(existingChannel.sources.map(s => s.url));
+                
+                // 检查新导入的所有源是否都已经存在
+                const isSubset = newCh.sources.every(s => existingUrls.has(s.url));
+
+                if (isSubset) {
+                    // 如果所有新源都已经在老源里了，直接跳过，不需要用户确认
+                    skippedDuplicateCount++;
+                } else {
+                    // 存在不一样的新源，才弹出冲突
+                    conflicts.push({
+                        newItem: newCh,
+                        existingIndex: existingIndex,
+                        matchType: 'exact',
+                        suggestedName: existingChannel.name
+                    });
+                }
                 return;
             }
 
             // B. 模糊/疑似匹配检测
             let fuzzyIndex = -1;
-            
-            // B1. 尝试清洗名称后匹配 (如 "CCTV1 4K" -> "CCTV1")
             const cleanKeyMatchIndex = this.channels.findIndex(ch => this.normalizeName(ch.name) === cleanNewKey);
             if (cleanKeyMatchIndex > -1) {
                 fuzzyIndex = cleanKeyMatchIndex;
             } 
-            // B2. 包含关系检测 (如 "凤凰卫视中文台" vs "凤凰中文")
             else {
-                // 只有当名字长度大于2才检测包含关系，避免 "CCTV" 匹配到所有台
                 if (cleanNewKey.length > 2) {
                     fuzzyIndex = this.channels.findIndex(ch => {
                         const existingClean = this.cleanChannelName(ch.name);
@@ -242,6 +253,8 @@ export const importMethods = `
             }
 
             if (fuzzyIndex > -1) {
+                // 模糊匹配同样可以做一步子集检测，如果名字相似且源完全包含，也可以考虑跳过
+                // 但为了安全起见（名字毕竟不一样），模糊匹配建议还是让用户确认一下比较好
                 conflicts.push({
                     newItem: newCh,
                     existingIndex: fuzzyIndex,
@@ -256,7 +269,6 @@ export const importMethods = `
 
         // 3. 执行添加
         if (safeToAdd.length > 0) {
-            // 新频道添加到列表头部
             this.channels = [...safeToAdd, ...this.channels];
         }
 
@@ -265,7 +277,11 @@ export const importMethods = `
             this.conflictModal.queue = conflicts;
             this.loadNextConflict();
         } else {
-            this.showToast(\`导入完成，共添加 \${safeToAdd.length} 个新频道\`, 'success');
+            let msg = \`导入完成，新增 \${safeToAdd.length} 个频道\`;
+            if (skippedDuplicateCount > 0) {
+                msg += \`，自动跳过 \${skippedDuplicateCount} 个完全重复项\`;
+            }
+            this.showToast(msg, 'success');
         }
     },
 
@@ -284,10 +300,8 @@ export const importMethods = `
         this.conflictModal.matchType = conflict.matchType;
         this.conflictModal.suggestedName = conflict.suggestedName;
         
-        // 默认动作：完全匹配默认合并，疑似匹配默认添加为新频道(为了安全)
         this.conflictModal.action = conflict.matchType === 'exact' ? 'merge' : 'new'; 
         
-        // 准备 URL 列表供预览
         const oldUrls = existingItem.sources.map(s => s.url);
         const newUrls = conflict.newItem.sources.map(s => s.url);
         this.conflictModal.mergedUrls = [...new Set([...oldUrls, ...newUrls])];
@@ -298,14 +312,11 @@ export const importMethods = `
 
     applyConflictLogic(action, index, newItem, primaryUrl, mergedUrlStrings) {
         if (action === 'new') {
-            // 作为新频道添加
             this.channels.unshift(newItem); 
         }
         else if (action === 'old') {
-            // 仅保留旧版 = 丢弃新版 (什么都不做)
         }
         else if (action === 'merge') {
-            // 合并到现有频道
             const newSources = mergedUrlStrings.map(u => ({
                 url: u,
                 enabled: true,
@@ -331,20 +342,11 @@ export const importMethods = `
     resolveAllConflicts() {
         const action = this.conflictModal.action;
         
-        // 处理当前显示的这一条
         this.applyConflictLogic(action, this.conflictModal.existingIndex, this.conflictModal.currentItem, this.conflictModal.selectedPrimary, this.conflictModal.mergedUrls);
-        this.conflictModal.queue.shift(); // 移除当前
+        this.conflictModal.queue.shift();
 
-        // 处理剩余队列
         while(this.conflictModal.queue.length > 0) {
             const conflict = this.conflictModal.queue[0];
-            
-            // 注意：如果批量操作是 'merge'，且是 fuzzy 匹配，这里会强制合并到疑似对象
-            // 这可能不是用户想要的，但既然用户点了“批量处理”，就按当前选择的 action 执行
-            
-            // 为了安全起见，如果是批量处理，我们仅对 matchType 相同的项应用逻辑？
-            // 简便起见，这里全部应用。用户使用批量功能需谨慎。
-            
             const index = conflict.existingIndex;
             const existingItem = this.channels[index];
             const newItem = conflict.newItem;
