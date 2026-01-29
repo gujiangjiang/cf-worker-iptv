@@ -30,16 +30,17 @@ export const cssContent = `
     .modal-footer { border-top: 1px solid #f0f0f0; padding: 15px 25px; background-color: #fff; }
     .modal-header.bg-danger-subtle { background-color: #f8d7da; color: #842029; }
 
-    /* Logo 预览框 */
+    /* Logo 预览框 - 修复：增大尺寸并优化显示 */
     .logo-preview-box {
-        width: 40px; height: 38px;
+        width: 80px; height: 60px;
         background-color: #f8f9fa;
         border: 1px solid #ced4da;
         border-radius: 4px;
         display: flex; align-items: center; justify-content: center;
         overflow: hidden;
+        flex-shrink: 0; /* 防止被挤压 */
     }
-    .logo-preview-box img { max-width: 100%; max-height: 100%; }
+    .logo-preview-box img { max-width: 100%; max-height: 100%; object-fit: contain; }
 
     /* 源列表样式 */
     .source-row { transition: background 0.2s; }
