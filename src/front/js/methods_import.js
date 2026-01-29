@@ -6,35 +6,34 @@ export const importMethods = `
         return Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
     },
 
-    // 标准化名称：用于判定“是否为同一个频道”
-    // 逻辑：全角转半角 -> 转大写 -> 去除空格、横杠、下划线、点
-    // 关键点：保留 '+' 号，以区分 CCTV5 和 CCTV5+
+    // 标准化名称：用于判定“是否为同一个频道” (完全匹配)
     normalizeName(name) {
         if (!name) return '';
-        
-        // 1. 全角字符转半角 (例如：ＣＣＴＶ－１ -> CCTV-1)
+        // 全角转半角
         let s = name.replace(/[\\uFF01-\\uFF5E]/g, function(c) { 
             return String.fromCharCode(c.charCodeAt(0) - 0xFEE0); 
         }).replace(/\\u3000/g, ' ');
-        
-        // 2. 转大写
         s = s.toUpperCase();
-        
-        // 3. 去除干扰字符：空格、横杠(-)、下划线(_)、点(.)
-        // 注意：正则表达式不包含 '+'，所以 CCTV5+ 依然是 CCTV5+，不会变成 CCTV5
+        // 去除干扰字符，保留加号
         return s.replace(/[-_\\s\\.]/g, '');
     },
 
-    // 清洗名称：去除常见的后缀（分辨率、码率、特殊标记），用于“疑似重复”的模糊匹配
+    // 清洗名称：去除常见的后缀，用于“疑似重复”的模糊匹配
     cleanChannelName(name) {
         if (!name) return '';
         let s = name.toUpperCase();
-        // 去除常见的后缀模式
-        s = s.replace(/\\s+\\d+M\\d*/g, ''); // 去除 " 8M", " 8M1080"
-        s = s.replace(/\\s+\\d+K/g, '');     // 去除 " 4K", " 8K"
-        s = s.replace(/\\s+(F?HD|SD|HEVC|HDR)/g, ''); // 去除 HD, FHD, HDR
-        s = s.replace(/[\\[\\(].*?[\\]\\)]/g, ''); // 去除括号内容 [xxx] (xxx)
+        
+        // 增强正则：支持以 空格、横杠、下划线 开头的后缀，或者直接以这些结尾
+        // 去除 " 4K", "-4K", "_4K", " 8M", " 18M2160"
+        s = s.replace(/(?:[\\s-_]|^)\\d+M\\d*/g, ''); 
+        s = s.replace(/(?:[\\s-_]|^)\\d+K/g, '');     
+        s = s.replace(/(?:[\\s-_]|^)(F?HD|SD|HEVC|HDR)/g, ''); 
+        
+        // 去除括号内容 [xxx] (xxx)
+        s = s.replace(/[\\[\\(].*?[\\]\\)]/g, ''); 
         s = s.replace(/测试/g, '');
+        
+        // 最后去除剩余符号和空格
         return s.replace(/[-_\\s]/g, ''); 
     },
 
@@ -177,7 +176,6 @@ export const importMethods = `
         let internalMergeCount = 0;
         let skippedDuplicateCount = 0; 
         
-        // 0. 提取新分组
         const newGroups = new Set(this.groups);
         let groupsAdded = 0;
         rawChannels.forEach(ch => {
@@ -188,7 +186,6 @@ export const importMethods = `
         });
         if(groupsAdded > 0) this.groups = Array.from(newGroups);
 
-        // 1. 导入数据内部去重
         const uniqueNewChannels = [];
         const tempMap = new Map();
         
@@ -210,7 +207,6 @@ export const importMethods = `
 
         if (internalMergeCount > 0) this.showToast(\`导入文件中自动合并了 \${internalMergeCount} 个同名频道\`, 'success');
 
-        // 2. 构建现有频道映射表
         const existingMap = new Map(); 
         this.channels.forEach((ch, index) => {
             const key = this.normalizeName(ch.name); 
@@ -229,17 +225,12 @@ export const importMethods = `
                 const existingIndex = existingMap.get(newKey);
                 const existingChannel = this.channels[existingIndex];
                 
-                // --- 核心逻辑：源包含检测 ---
                 const existingUrls = new Set(existingChannel.sources.map(s => s.url));
-                
-                // 检查：新导入的所有源，是否都已经存在于老频道中？
                 const isSubset = newCh.sources.every(s => existingUrls.has(s.url));
 
                 if (isSubset) {
-                    // 只有完全是子集时才跳过，不打扰用户
                     skippedDuplicateCount++;
                 } else {
-                    // 有新源，弹出冲突供用户决策
                     conflicts.push({
                         newItem: newCh,
                         existingIndex: existingIndex,
@@ -250,23 +241,48 @@ export const importMethods = `
                 return;
             }
 
-            // B. 模糊/疑似匹配检测
+            // B. 模糊/疑似匹配检测 (修复版)
             let fuzzyIndex = -1;
-            const cleanKeyMatchIndex = this.channels.findIndex(ch => this.normalizeName(ch.name) === cleanNewKey);
+            
+            // 策略：如果名字清洗后相同，或者包含关系，必须进行数字边界检查
+            // 例如：CCTV1 (Clean) vs CCTV16 (Clean)
+            // CCTV16 包含 CCTV1，但 '1' 后面是 '6'，这是数字，所以不是同一个台。
+            
+            const cleanKeyMatchIndex = this.channels.findIndex(ch => {
+                const existingClean = this.cleanChannelName(ch.name);
+                
+                // 1. 完全相同：必定是疑似
+                if (existingClean === cleanNewKey) return true;
+                
+                // 2. 包含关系 (长包含短)
+                // 避免短词 (如 "HD") 误判，长度限制 > 2
+                if (cleanNewKey.length <= 2 || existingClean.length <= 2) return false;
+
+                let longStr, shortStr;
+                if (existingClean.includes(cleanNewKey)) {
+                    longStr = existingClean;
+                    shortStr = cleanNewKey;
+                } else if (cleanNewKey.includes(existingClean)) {
+                    longStr = cleanNewKey;
+                    shortStr = existingClean;
+                } else {
+                    return false; // 不包含
+                }
+
+                // 3. 数字边界检查 (核心修复)
+                const matchIndex = longStr.indexOf(shortStr);
+                const nextChar = longStr[matchIndex + shortStr.length];
+
+                // 如果匹配结束后的下一个字符是数字，说明是类似 1 vs 16 的情况，判定为不同
+                if (nextChar && /\\d/.test(nextChar)) {
+                    return false;
+                }
+
+                return true;
+            });
+
             if (cleanKeyMatchIndex > -1) {
                 fuzzyIndex = cleanKeyMatchIndex;
-            } 
-            else {
-                if (cleanNewKey.length > 2) {
-                    fuzzyIndex = this.channels.findIndex(ch => {
-                        const existingClean = this.cleanChannelName(ch.name);
-                        if (existingClean.length <= 2) return false;
-                        return existingClean.includes(cleanNewKey) || cleanNewKey.includes(existingClean);
-                    });
-                }
-            }
-
-            if (fuzzyIndex > -1) {
                 conflicts.push({
                     newItem: newCh,
                     existingIndex: fuzzyIndex,
@@ -278,19 +294,16 @@ export const importMethods = `
             }
         });
 
-        // 3. 执行添加
         if (safeToAdd.length > 0) {
             this.channels = [...safeToAdd, ...this.channels];
         }
 
-        // 4. 处理冲突
         if (conflicts.length > 0) {
             this.conflictModal.queue = conflicts;
             this.loadNextConflict();
         } else {
             let msg = \`导入完成，新增 \${safeToAdd.length} 个频道\`;
             if (skippedDuplicateCount > 0) {
-                // 修正：采用用户要求的明确提示文案
                 msg += \`，检测到 \${skippedDuplicateCount} 个完全一致或被包含的频道已自动忽略\`;
             }
             this.showToast(msg, 'success');
