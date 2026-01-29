@@ -5,6 +5,23 @@
 
 import { checkAuth, corsHeaders, jsonResponse, errorResponse } from './utils.js';
 
+// --- 内部 Helper: 通用 KV 保存逻辑 ---
+async function saveKVHelper(request, env, key, validator = null) {
+    if (!checkAuth(request, env)) return errorResponse("Unauthorized", 401);
+    try {
+        const body = await request.json();
+        // 如果提供了校验函数且校验失败，直接返回错误
+        if (validator) {
+            const error = validator(body);
+            if (error) return errorResponse(error, 400);
+        }
+        await env.IPTV_KV.put(key, JSON.stringify(body));
+        return new Response("Saved", { headers: corsHeaders });
+    } catch (e) {
+        return errorResponse("Invalid Data", 400);
+    }
+}
+
 // 获取访客配置 (无需鉴权，只返回必要的公共信息)
 export async function handleGetGuestConfig(request, env) {
     try {
@@ -41,17 +58,9 @@ export async function handleList(request, env) {
     }
 }
 
-// 保存频道列表
+// 保存频道列表 (使用通用 Helper)
 export async function handleSave(request, env) {
-    if (!checkAuth(request, env)) return errorResponse("Unauthorized", 401);
-    
-    try {
-        const body = await request.json();
-        await env.IPTV_KV.put("channels", JSON.stringify(body));
-        return new Response("Saved", { headers: corsHeaders });
-    } catch (e) {
-        return errorResponse("Invalid Data", 400);
-    }
+    return saveKVHelper(request, env, "channels");
 }
 
 // 获取全局配置 (包含访客设置等敏感信息，需要鉴权)
@@ -65,20 +74,14 @@ export async function handleGetSettings(request, env) {
     }
 }
 
-// 保存全局配置
+// 保存全局配置 (使用通用 Helper + 校验逻辑)
 export async function handleSaveSettings(request, env) {
-    if (!checkAuth(request, env)) return errorResponse("Unauthorized", 401);
-    try {
-        const body = await request.json();
-        // 简单的校验
+    return saveKVHelper(request, env, "settings", (body) => {
         if (body.guestConfig && typeof body.guestConfig !== 'object') {
-             return errorResponse("Invalid Guest Config", 400);
+            return "Invalid Guest Config";
         }
-        await env.IPTV_KV.put("settings", JSON.stringify(body));
-        return new Response("Settings Saved", { headers: corsHeaders });
-    } catch (e) {
-        return errorResponse("Invalid Data", 400);
-    }
+        return null;
+    });
 }
 
 // 获取分组列表 (新增)
@@ -93,16 +96,9 @@ export async function handleGetGroups(request, env) {
     }
 }
 
-// 保存分组列表 (新增)
+// 保存分组列表 (使用通用 Helper)
 export async function handleSaveGroups(request, env) {
-    if (!checkAuth(request, env)) return errorResponse("Unauthorized", 401);
-    try {
-        const body = await request.json();
-        await env.IPTV_KV.put("groups", JSON.stringify(body));
-        return new Response("Groups Saved", { headers: corsHeaders });
-    } catch (e) {
-        return errorResponse("Invalid Data", 400);
-    }
+    return saveKVHelper(request, env, "groups");
 }
 
 // 代理获取远程 M3U 内容
