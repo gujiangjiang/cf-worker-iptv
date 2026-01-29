@@ -27,7 +27,7 @@ export const modalTemplate = `
     </div>
 
     <div v-if="modals.groupChannelAdder" class="modal-overlay" style="z-index: 1080;" @click.self="modals.groupChannelAdder = false">
-        <div class="modal-dialog modal-dialog-scrollable">
+        <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title">添加频道到 "{{ groupAdderData.targetGroup }}"</h5>
@@ -38,7 +38,7 @@ export const modalTemplate = `
                     <div v-if="groupAdderData.candidates.length === 0" class="text-center py-4 text-muted border rounded border-dashed">
                         暂无“默认”分组的频道
                     </div>
-                    <div v-else class="list-group">
+                    <div v-else class="list-group" style="max-height: 50vh; overflow-y: auto;">
                         <label v-for="ch in groupAdderData.candidates" :key="ch.idx" class="list-group-item d-flex gap-2 align-items-center" style="cursor: pointer;">
                             <input class="form-check-input flex-shrink-0" type="checkbox" :checked="groupAdderData.selectedIndices.includes(ch.idx)" @change="toggleCandidate(ch.idx)">
                             <span class="text-truncate">{{ ch.name }}</span>
@@ -55,22 +55,24 @@ export const modalTemplate = `
     </div>
 
     <div v-if="modals.groupViewer" class="modal-overlay" style="z-index: 1090;" @click.self="modals.groupViewer = false">
-        <div class="modal-dialog modal-dialog-scrollable">
+        <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title">📂 {{ groupViewerData.groupName }} ({{ groupViewerData.list.length }})</h5>
                     <button type="button" class="btn-close" @click="modals.groupViewer = false"></button>
                 </div>
-                <div class="modal-body">
-                    <div v-if="groupViewerData.list.length === 0" class="text-center py-4 text-muted border rounded border-dashed">
+                <div class="modal-body p-0">
+                    <div v-if="groupViewerData.list.length === 0" class="text-center py-4 text-muted m-3 border rounded border-dashed">
                         该分组下暂无频道
                     </div>
-                    <ul v-else class="list-group list-group-flush">
-                        <li v-for="(ch, idx) in groupViewerData.list" :key="idx" class="list-group-item d-flex justify-content-between align-items-center">
-                            <span class="text-truncate">{{ ch.name }}</span>
-                            <span class="badge bg-light text-dark">{{ ch.sources.length }}个源</span>
-                        </li>
-                    </ul>
+                    <div v-else style="max-height: 60vh; overflow-y: auto;">
+                        <ul class="list-group list-group-flush">
+                            <li v-for="(ch, idx) in groupViewerData.list" :key="idx" class="list-group-item d-flex justify-content-between align-items-center">
+                                <span class="text-truncate flex-grow-1 me-2" :title="ch.name">{{ ch.name }}</span>
+                                <span class="badge bg-light text-dark flex-shrink-0 border">{{ ch.sources.length }}个源</span>
+                            </li>
+                        </ul>
+                    </div>
                 </div>
                 <div class="modal-footer">
                     <button class="btn btn-primary" @click="modals.groupViewer = false">关闭</button>
