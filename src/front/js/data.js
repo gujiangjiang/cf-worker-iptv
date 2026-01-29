@@ -5,41 +5,41 @@ export const dataContent = `
     isAuth: false,
     password: '',
     channels: [],
-    groups: [], // 分组列表
+    groups: [],
     settings: {
         epgUrl: '',
         catchup: '',
         catchupSource: ''
     },
-    
-    // Toast 状态
     toast: { show: false, message: '', type: 'success' },
     toastTimer: null,
-    
     loading: false,
     importUrl: '',
     baseUrl: window.location.origin,
     sortableInstance: null,
+    sourceSortableInstance: null, // 新增：模态框内源列表的排序实例
 
-    // 模态框显示状态
     modals: {
         settings: false,
-        addChannel: false,
+        channelEditor: false, // 统一使用 channelEditor 模态框
         groupManager: false
     },
 
-    // 新增频道表单数据
-    newChannelForm: {
+    // 频道编辑表单
+    editMode: false, // false=新增, true=编辑
+    editingIndex: -1,
+    channelForm: {
         group: '默认',
         name: '',
+        tvgName: '',
+        useLogo: false, // 是否使用 Logo
         logo: '',
-        url: ''
+        sources: [] // { url: '', enabled: true, isPrimary: false }
     },
+    logoPreviewUrl: '', // Logo 预览地址
     
-    // 分组管理输入框
     newGroupInput: '',
     
-    // 冲突解决模态框状态
     conflictModal: {
         show: false,
         queue: [], 

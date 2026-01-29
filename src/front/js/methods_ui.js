@@ -1,24 +1,20 @@
 /**
- * 前端 UI 交互逻辑模块 (Toast, Sortable, Modals, Groups)
+ * 前端 UI 交互逻辑模块
  */
 export const uiMethods = `
-    // 显示 Toast 消息
     showToast(message, type = 'success') {
         this.toast.message = message;
         this.toast.type = type;
         this.toast.show = true;
         if (this.toastTimer) clearTimeout(this.toastTimer);
-        this.toastTimer = setTimeout(() => {
-            this.toast.show = false;
-        }, 3000);
+        this.toastTimer = setTimeout(() => { this.toast.show = false; }, 3000);
     },
 
-    // 初始化拖拽排序
+    // 首页列表排序
     initSortable() {
         const el = document.getElementById('channel-list');
         if (!el) return;
         if (this.sortableInstance) this.sortableInstance.destroy();
-
         this.sortableInstance = Sortable.create(el, {
             handle: '.drag-handle',
             animation: 150,
@@ -31,67 +27,125 @@ export const uiMethods = `
         });
     },
 
-    // --- 模态框操作 ---
-    
-    // 打开新增频道模态框
-    openAddChannelModal() {
-        this.newChannelForm = { group: this.groups.length > 0 ? this.groups[0] : '默认', name: '', logo: '', url: '' };
-        this.modals.addChannel = true;
-    },
-    
-    // 确认新增频道
-    confirmAddChannel() {
-        if(!this.newChannelForm.name || !this.newChannelForm.url) {
-            return this.showToast('名称和链接不能为空', 'error');
-        }
-        // 构造新频道对象
-        const ch = {
-            group: this.newChannelForm.group,
-            name: this.newChannelForm.name,
-            tvgName: this.newChannelForm.name,
-            logo: this.newChannelForm.logo,
-            urls: [this.newChannelForm.url]
-        };
-        // 插入到顶部
-        this.channels.unshift(ch);
-        this.modals.addChannel = false;
-        this.showToast('添加成功', 'success');
+    // 模态框内直播源排序
+    initSourceSortable() {
+        const el = document.getElementById('source-list-container');
+        if (!el) return;
+        if (this.sourceSortableInstance) this.sourceSortableInstance.destroy();
+        this.sourceSortableInstance = Sortable.create(el, {
+            handle: '.source-drag-handle',
+            animation: 150,
+            ghostClass: 'sortable-ghost',
+            onEnd: (evt) => {
+                const item = this.channelForm.sources[evt.oldIndex];
+                this.channelForm.sources.splice(evt.oldIndex, 1);
+                this.channelForm.sources.splice(evt.newIndex, 0, item);
+            }
+        });
     },
 
-    // --- 分组管理逻辑 ---
+    // --- 频道编辑/新增 ---
+
+    // 打开新增模式
+    openAddChannelModal() {
+        this.editMode = false;
+        this.editingIndex = -1;
+        this.channelForm = {
+            group: this.groups.length > 0 ? this.groups[0] : '默认',
+            name: '', tvgName: '',
+            useLogo: false, logo: '',
+            sources: [{ url: '', enabled: true, isPrimary: true }]
+        };
+        this.logoPreviewUrl = '';
+        this.modals.channelEditor = true;
+        this.$nextTick(() => this.initSourceSortable());
+    },
+
+    // 打开编辑模式
+    openEditChannelModal(index) {
+        this.editMode = true;
+        this.editingIndex = index;
+        const ch = this.channels[index];
+        // 深拷贝防止直接修改
+        this.channelForm = JSON.parse(JSON.stringify(ch));
+        this.logoPreviewUrl = this.channelForm.logo;
+        this.modals.channelEditor = true;
+        this.$nextTick(() => this.initSourceSortable());
+    },
+
+    // 保存频道
+    saveChannel() {
+        // 校验
+        if(!this.channelForm.name) return this.showToast('频道名称不能为空', 'error');
+        if(this.channelForm.sources.length === 0) return this.showToast('至少需要一个直播源', 'error');
+        
+        // 构造数据
+        const channelData = {
+            ...this.channelForm,
+            tvgName: this.channelForm.tvgName || this.channelForm.name,
+            logo: this.channelForm.useLogo ? this.channelForm.logo : ''
+        };
+
+        if(this.editMode) {
+            this.channels[this.editingIndex] = channelData;
+            this.showToast('修改已保存', 'success');
+        } else {
+            this.channels.unshift(channelData);
+            this.showToast('新建成功', 'success');
+        }
+        this.modals.channelEditor = false;
+    },
+
+    // --- Logo 相关 ---
+    checkLogo() {
+        if(this.channelForm.logo) {
+            this.logoPreviewUrl = this.channelForm.logo;
+        }
+    },
+
+    // --- 直播源管理 ---
+    addSource() {
+        this.channelForm.sources.push({ url: '', enabled: true, isPrimary: false });
+    },
+    removeSource(idx) {
+        this.channelForm.sources.splice(idx, 1);
+    },
     
-    // 添加分组
+    // 只有启用的源才能选为主源
+    onSourceEnableChange(idx) {
+        const source = this.channelForm.sources[idx];
+        if(!source.enabled) {
+            source.isPrimary = false;
+        }
+    },
+    // 单选逻辑：设置当前为主源，其他置否
+    setPrimarySource(idx) {
+        this.channelForm.sources.forEach((s, i) => {
+            s.isPrimary = (i === idx);
+        });
+    },
+
+    // --- 分组管理 ---
     addGroup() {
         const val = this.newGroupInput.trim();
         if(!val) return;
-        if(this.groups.includes(val)) {
-            return this.showToast('分组已存在', 'error');
-        }
+        if(this.groups.includes(val)) return this.showToast('分组已存在', 'error');
         this.groups.push(val);
         this.newGroupInput = '';
     },
-    
-    // 删除分组
     removeGroup(index) {
-        // 检查是否有频道正在使用该分组
         const groupName = this.groups[index];
         const inUse = this.channels.some(ch => ch.group === groupName);
         if(inUse) {
-            if(!confirm(\`分组 "\${groupName}" 正在被使用，删除后对应频道将变为"未分组"，确定删除吗？\`)) return;
-            // 将对应频道的 group 重置为 '默认' 或 '未分组'
-            this.channels.forEach(ch => {
-                if(ch.group === groupName) ch.group = '默认';
-            });
+            if(!confirm(\`分组 "\${groupName}" 正在被使用，删除后将重置为"默认"，确定？\`)) return;
+            this.channels.forEach(ch => { if(ch.group === groupName) ch.group = '默认'; });
         }
         this.groups.splice(index, 1);
     },
-    
-    // 从频道列表同步分组 (提取所有已使用的分组)
     syncGroupsFromChannels() {
         const extracted = new Set(this.channels.map(c => c.group || '默认'));
-        // 合并当前列表和提取的列表
         const merged = new Set([...this.groups, ...extracted]);
         this.groups = Array.from(merged);
-        this.showToast('已从频道列表同步分组', 'success');
+        this.showToast('已同步分组', 'success');
     }
 `;

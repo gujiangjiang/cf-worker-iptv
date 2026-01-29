@@ -7,20 +7,46 @@ export const importMethods = `
         return name.replace(/[-_\\s]/g, '').toUpperCase();
     },
 
+    // 数据标准化：核心迁移逻辑
     standardizeChannel(ch) {
-        let urls = [];
-        if (Array.isArray(ch.urls)) {
-            urls = ch.urls.filter(u => u && u.trim() !== '');
-        } else if (ch.url) {
-            urls = [ch.url];
+        let sources = [];
+        
+        // 1. 处理旧数据 sources (如果是对象数组)
+        if (Array.isArray(ch.sources) && ch.sources.length > 0 && typeof ch.sources[0] === 'object') {
+            sources = ch.sources;
+        } 
+        // 2. 处理中间态数据 urls (字符串数组)
+        else if (Array.isArray(ch.urls)) {
+            sources = ch.urls.filter(u => u && u.trim()).map((u, idx) => ({
+                url: u,
+                enabled: true,
+                isPrimary: idx === 0 // 默认第一个为主源
+            }));
+        } 
+        // 3. 处理最老数据 url (单字符串)
+        else if (ch.url) {
+            sources = [{
+                url: ch.url,
+                enabled: true,
+                isPrimary: true
+            }];
         }
+
+        // 确保至少有一个主源 (如果存在源的话)
+        if (sources.length > 0 && !sources.some(s => s.isPrimary && s.enabled)) {
+            if(sources[0].enabled) sources[0].isPrimary = true;
+        }
+
         const displayName = ch.name || '未知频道';
-        const tvgName = (ch.tvgName !== undefined && ch.tvgName !== null && ch.tvgName !== '') ? ch.tvgName : displayName;
+        const tvgName = (ch.tvgName !== undefined && ch.tvgName !== null) ? ch.tvgName : displayName;
+        
         return {
             ...ch,
             name: displayName,
             tvgName: tvgName,
-            urls: urls
+            logo: ch.logo || '',
+            useLogo: !!ch.logo, // 如果有 logo 则默认开启
+            sources: sources
         };
     },
 
@@ -52,9 +78,6 @@ export const importMethods = `
                 if(catchupMatch) this.settings.catchup = catchupMatch[1];
                 if(sourceMatch) this.settings.catchupSource = sourceMatch[1];
                 settingsUpdated = true;
-                
-                // --- 修复：不再弹出模态框，改为 Toast 提示 ---
-                // this.modals.settings = true; 
             }
         }
 
@@ -87,7 +110,11 @@ export const importMethods = `
                 };
             } else if (line && !line.startsWith('#')) {
                 if (currentInfo.name) {
-                    rawChannels.push({ ...currentInfo, urls: [line] });
+                    // M3U 导入默认生成单个源对象
+                    rawChannels.push({ 
+                        ...currentInfo, 
+                        sources: [{ url: line, enabled: true, isPrimary: true }] 
+                    });
                     currentInfo = {};
                 }
             }
@@ -98,17 +125,14 @@ export const importMethods = `
             return;
         }
 
-        if(settingsUpdated) {
-            this.showToast('已自动提取并更新全局设置(EPG/回看)', 'success');
-        }
-
+        if(settingsUpdated) this.showToast('已自动提取并更新全局设置', 'success');
         this.processImports(rawChannels);
     },
 
     processImports(rawChannels) {
         let internalMergeCount = 0;
         
-        // 0. 提取并同步新分组
+        // 0. 提取新分组
         const newGroups = new Set(this.groups);
         let groupsAdded = 0;
         rawChannels.forEach(ch => {
@@ -117,23 +141,21 @@ export const importMethods = `
                 groupsAdded++;
             }
         });
-        if(groupsAdded > 0) {
-            this.groups = Array.from(newGroups);
-            this.showToast(\`自动添加了 \${groupsAdded} 个新分组\`, 'success');
-        }
+        if(groupsAdded > 0) this.groups = Array.from(newGroups);
 
         // 1. 内部去重
         const uniqueNewChannels = [];
         const tempMap = new Map();
         rawChannels.forEach(ch => {
-            ch = this.standardizeChannel(ch);
+            ch = this.standardizeChannel(ch); // 确保数据结构最新
             const key = this.normalizeName(ch.name);
             if (!key) { uniqueNewChannels.push(ch); return; }
             if (tempMap.has(key)) {
                 const existingIndex = tempMap.get(key);
                 const existingCh = uniqueNewChannels[existingIndex];
-                const mergedUrls = [...new Set([...existingCh.urls, ...ch.urls])];
-                uniqueNewChannels[existingIndex].urls = mergedUrls;
+                // 合并 sources
+                const mergedSources = [...existingCh.sources, ...ch.sources];
+                uniqueNewChannels[existingIndex].sources = mergedSources;
                 internalMergeCount++;
             } else {
                 tempMap.set(key, uniqueNewChannels.length);
@@ -181,8 +203,10 @@ export const importMethods = `
         this.conflictModal.currentItem = conflict.newItem;
         this.conflictModal.existingIndex = conflict.existingIndex;
         this.conflictModal.action = 'merge'; 
-        const oldUrls = existingItem.urls || [];
-        const newUrls = conflict.newItem.urls || [];
+        
+        // 提取纯 URL 用于展示
+        const oldUrls = existingItem.sources.map(s => s.url);
+        const newUrls = conflict.newItem.sources.map(s => s.url);
         this.conflictModal.mergedUrls = [...new Set([...oldUrls, ...newUrls])];
         this.conflictModal.selectedPrimary = oldUrls.length > 0 ? oldUrls[0] : newUrls[0];
         this.conflictModal.show = true;
@@ -190,18 +214,20 @@ export const importMethods = `
 
     isUrlFromOld(url) {
         const existingItem = this.channels[this.conflictModal.existingIndex];
-        return existingItem && existingItem.urls && existingItem.urls.includes(url);
+        return existingItem && existingItem.sources.some(s => s.url === url);
     },
 
-    applyConflictLogic(action, index, newItem, primaryUrl, mergedUrls) {
+    // 冲突应用逻辑 (适配新结构)
+    applyConflictLogic(action, index, newItem, primaryUrl, mergedUrlStrings) {
         if (action === 'new') this.channels[index] = newItem;
         else if (action === 'merge') {
-            let finalUrls = mergedUrls;
-            if (primaryUrl) {
-                finalUrls = finalUrls.filter(u => u !== primaryUrl);
-                finalUrls.unshift(primaryUrl);
-            }
-            this.channels[index].urls = finalUrls;
+            // 重构 sources 对象数组
+            const newSources = mergedUrlStrings.map(u => ({
+                url: u,
+                enabled: true,
+                isPrimary: u === primaryUrl
+            }));
+            this.channels[index].sources = newSources;
         }
     },
 
@@ -221,14 +247,14 @@ export const importMethods = `
             const existingItem = this.channels[index];
             const newItem = conflict.newItem;
             let primaryUrl = '';
-            let mergedUrls = [];
+            let mergedUrlStrings = [];
             if (action === 'merge') {
-                const oldUrls = existingItem.urls || [];
-                const newUrls = newItem.urls || [];
-                mergedUrls = [...new Set([...oldUrls, ...newUrls])];
+                const oldUrls = existingItem.sources.map(s => s.url);
+                const newUrls = newItem.sources.map(s => s.url);
+                mergedUrlStrings = [...new Set([...oldUrls, ...newUrls])];
                 primaryUrl = oldUrls.length > 0 ? oldUrls[0] : newUrls[0];
             }
-            this.applyConflictLogic(action, index, newItem, primaryUrl, mergedUrls);
+            this.applyConflictLogic(action, index, newItem, primaryUrl, mergedUrlStrings);
             this.conflictModal.queue.shift();
         }
         this.conflictModal.show = false;

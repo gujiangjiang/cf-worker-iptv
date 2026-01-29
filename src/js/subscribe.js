@@ -31,12 +31,19 @@ export async function handleM3uExport(request, env) {
             const logo = ch.logo || "";
             const group = ch.group || "默认";
             
-            // 数据结构兼容：优先取 urls 数组的第一个作为主源，如果没有则取旧版 url 字段
+            // 查找主源 (必须是启用且被标记为主源的)
             let mainUrl = "";
-            if (Array.isArray(ch.urls) && ch.urls.length > 0) {
-                mainUrl = ch.urls[0];
-            } else {
-                mainUrl = ch.url || "";
+            if (Array.isArray(ch.sources) && ch.sources.length > 0) {
+                const primary = ch.sources.find(s => s.enabled && s.isPrimary);
+                if (primary) mainUrl = primary.url;
+                else {
+                    // 兜底：如果没有显式主源，找第一个启用的
+                    const firstEnabled = ch.sources.find(s => s.enabled);
+                    if (firstEnabled) mainUrl = firstEnabled.url;
+                }
+            } else if (ch.url) {
+                // 兼容旧数据
+                mainUrl = ch.url;
             }
             
             if (mainUrl) {
@@ -56,7 +63,7 @@ export async function handleM3uExport(request, env) {
     }
 }
 
-// 导出 TXT 格式 (TVBox/DIYP)
+// 导出 TXT 格式
 export async function handleTxtExport(request, env) {
     try {
         const data = await env.IPTV_KV.get("channels", { type: "json" });
@@ -65,23 +72,23 @@ export async function handleTxtExport(request, env) {
         let txtContent = "";
         const groups = {};
         
-        // 按分组聚合
         data.forEach(ch => {
             const group = ch.group || "默认";
             if(!groups[group]) groups[group] = [];
             groups[group].push(ch);
         });
 
-        // 生成文本
         for (const [groupName, channels] of Object.entries(groups)) {
             txtContent += `${groupName},#genre#\n`;
             channels.forEach(ch => {
-                // 多源处理：将 urls 数组用 # 连接
                 let urlStr = "";
-                if (Array.isArray(ch.urls) && ch.urls.length > 0) {
-                    urlStr = ch.urls.join('#');
-                } else {
-                    urlStr = ch.url || "";
+                
+                if (Array.isArray(ch.sources) && ch.sources.length > 0) {
+                    // 过滤出所有启用的源
+                    const enabledUrls = ch.sources.filter(s => s.enabled).map(s => s.url);
+                    urlStr = enabledUrls.join('#');
+                } else if (ch.url) {
+                    urlStr = ch.url;
                 }
 
                 if (urlStr) {
