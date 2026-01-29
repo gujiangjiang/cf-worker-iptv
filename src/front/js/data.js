@@ -27,6 +27,18 @@ export const dataContent = `
         groupManager: false
     },
 
+    // 通用确认模态框状态
+    confirmModal: {
+        show: false,
+        title: '',
+        message: '',
+        type: 'info', // 'info' | 'danger'
+        actionType: '', // 'deleteSource' | 'deleteChannel' | 'clearAll'
+        targetIndex: -1,
+        inputPassword: '', // 清空列表时验证用
+        requirePassword: false
+    },
+
     // 频道编辑表单
     editMode: false, // false=新增, true=编辑
     editingIndex: -1,

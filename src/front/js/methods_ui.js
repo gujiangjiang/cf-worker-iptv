@@ -76,7 +76,7 @@ export const uiMethods = `
             group: this.groups.length > 0 ? this.groups[0] : '默认',
             name: '', tvgName: '',
             useLogo: false, logo: '',
-            sources: [] // 默认不添加源，需手动点击添加
+            sources: [] 
         };
         this.logoPreviewUrl = '';
         this.modals.channelEditor = true;
@@ -128,12 +128,66 @@ export const uiMethods = `
     // --- 直播源管理 ---
     addSource() {
         this.channelForm.sources.push({ url: '', enabled: true, isPrimary: false });
-    },
-    removeSource(idx) {
-        this.channelForm.sources.splice(idx, 1);
+        // 如果只有一个源，自动设为主源
+        if (this.channelForm.sources.length === 1) {
+            this.channelForm.sources[0].isPrimary = true;
+        }
     },
     
-    // 只有启用的源才能选为主源
+    // 触发删除源确认
+    triggerDeleteSource(idx) {
+        this.confirmModal = {
+            show: true,
+            title: '确认删除',
+            message: '确定要删除这个直播源吗？',
+            type: 'danger',
+            actionType: 'deleteSource',
+            targetIndex: idx,
+            requirePassword: false
+        };
+    },
+
+    // 触发删除频道确认
+    triggerDeleteChannel(idx) {
+        this.confirmModal = {
+            show: true,
+            title: '确认删除',
+            message: \`确定要删除频道 "\${this.channels[idx].name}" 吗？\`,
+            type: 'danger',
+            actionType: 'deleteChannel',
+            targetIndex: idx,
+            requirePassword: false
+        };
+    },
+
+    // 执行确认操作
+    executeConfirm() {
+        const { actionType, targetIndex, inputPassword } = this.confirmModal;
+
+        if (actionType === 'deleteSource') {
+            this.channelForm.sources.splice(targetIndex, 1);
+            // 删除后若只剩一个，自动设为主源
+            if (this.channelForm.sources.length === 1) {
+                this.channelForm.sources[0].isPrimary = true;
+            }
+            this.showToast('直播源已删除');
+        } 
+        else if (actionType === 'deleteChannel') {
+            this.channels.splice(targetIndex, 1);
+            this.showToast('频道已删除');
+        } 
+        else if (actionType === 'clearAll') {
+            // 验证密码
+            if (inputPassword !== this.password) {
+                return this.showToast('密码错误，无法清空', 'error');
+            }
+            this.channels = [];
+            this.showToast('列表已清空', 'success');
+        }
+
+        this.confirmModal.show = false;
+    },
+
     onSourceEnableChange(idx) {
         const source = this.channelForm.sources[idx];
         if(!source.enabled) {

@@ -21,6 +21,29 @@ export const html = `
 <body>
     <div id="app" class="container pb-5">
         
+        <div v-if="confirmModal.show" class="confirm-modal-overlay">
+            <div class="modal-dialog" style="min-width: 350px;">
+                <div class="modal-content">
+                    <div :class="['modal-header', confirmModal.type === 'danger' ? 'bg-danger-subtle' : '']">
+                        <h5 class="modal-title">{{ confirmModal.title }}</h5>
+                        <button type="button" class="btn-close" @click="confirmModal.show = false"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p class="mb-3">{{ confirmModal.message }}</p>
+                        
+                        <div v-if="confirmModal.requirePassword">
+                            <label class="form-label small text-muted">请输入管理密码以确认：</label>
+                            <input type="password" class="form-control" v-model="confirmModal.inputPassword" placeholder="Current Password">
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn btn-secondary" @click="confirmModal.show = false">取消</button>
+                        <button :class="['btn', confirmModal.type === 'danger' ? 'btn-danger' : 'btn-primary']" @click="executeConfirm">确认</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <div v-if="modals.channelEditor" class="modal-overlay" @click.self="modals.channelEditor = false">
             <div class="modal-dialog modal-lg">
                 <div class="modal-content">
@@ -79,7 +102,7 @@ export const html = `
                                     <div class="form-check" title="设为 M3U 主源">
                                         <input class="form-check-input" type="radio" :checked="source.isPrimary" @click="setPrimarySource(idx)" :disabled="!source.enabled">
                                     </div>
-                                    <button class="btn btn-sm btn-outline-danger border-0" @click="removeSource(idx)">✖</button>
+                                    <button class="btn btn-sm btn-outline-danger border-0" @click="triggerDeleteSource(idx)">✖</button>
                                 </div>
                             </div>
                             <div v-if="channelForm.sources.length === 0" class="text-center text-muted py-3 border rounded border-dashed">
@@ -197,7 +220,7 @@ export const html = `
             </div>
         </div>
 
-        <div class="toast-container position-fixed top-0 start-50 translate-middle-x p-3" style="z-index: 1050">
+        <div class="toast-container position-fixed top-0 start-50 translate-middle-x p-3">
             <div :class="['toast', 'align-items-center', 'text-white', 'border-0', toastClass, toast.show ? 'show' : '']">
                 <div class="d-flex"><div class="toast-body fs-6">{{ toast.message }}</div></div>
             </div>
@@ -231,7 +254,7 @@ export const html = `
                     <div class="col-md-5"><input type="file" class="form-control" @change="handleFileUpload" accept=".m3u,.m3u8"></div>
                     <div class="col-md-7"><div class="input-group"><input type="text" class="form-control" v-model="importUrl" placeholder="输入 M3U 链接..."><button class="btn btn-primary" @click="handleUrlImport">导入</button></div></div>
                     <div class="col-12 d-flex justify-content-end border-top pt-3 mt-3">
-                         <button class="btn btn-danger me-2" @click="clearAll">清空</button>
+                         <button class="btn btn-danger me-2" @click="triggerClearAll">清空</button>
                          <button class="btn btn-success" @click="saveData">💾 保存云端</button>
                     </div>
                 </div>
@@ -274,7 +297,7 @@ export const html = `
                                     </td>
                                     <td class="text-center">
                                         <button class="btn btn-sm btn-outline-primary me-2" @click="openEditChannelModal(index)">编辑</button>
-                                        <button class="btn btn-sm btn-outline-danger" @click="removeChannel(index)">删除</button>
+                                        <button class="btn btn-sm btn-outline-danger" @click="triggerDeleteChannel(index)">删除</button>
                                     </td>
                                 </tr>
                             </tbody>

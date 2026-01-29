@@ -70,7 +70,7 @@ export const apiMethods = `
         this.loading = false;
     },
 
-    // 保存所有数据 (列表 + 设置 + 分组)
+    // 保存所有数据
     async saveData() {
         this.loading = true;
         try {
@@ -100,15 +100,25 @@ export const apiMethods = `
         this.loading = false;
     },
 
-    // 移除频道
-    removeChannel(index) {
-        this.channels.splice(index, 1);
+    // 触发清空确认
+    triggerClearAll() {
+        this.confirmModal = {
+            show: true,
+            title: '⚠️ 危险操作警告',
+            message: '此操作将清空所有频道且无法恢复！请输入管理密码确认：',
+            type: 'danger',
+            actionType: 'clearAll',
+            inputPassword: '',
+            requirePassword: true
+        };
     },
-    // 清空列表
+
+    // 旧的 removeChannel 代理方法 (保留兼容性，虽然已在模板中替换调用)
+    removeChannel(index) {
+        this.triggerDeleteChannel(index);
+    },
+    // 旧的 clearAll 代理方法
     clearAll() {
-        if(confirm('确定要清空所有频道吗？')) {
-            this.channels = [];
-            this.showToast('列表已清空', 'success');
-        }
+        this.triggerClearAll();
     }
 `;
