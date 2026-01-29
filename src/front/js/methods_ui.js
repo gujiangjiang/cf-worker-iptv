@@ -64,7 +64,7 @@ export const uiMethods = `
         });
     },
 
-    // 新增：EPG 列表排序
+    // EPG 列表排序
     initEpgSortable() {
         const el = document.getElementById('epg-list-container');
         if (!el) return;
@@ -189,8 +189,12 @@ export const uiMethods = `
         this.$nextTick(() => this.initEpgSortable());
     },
 
-    // 新增：添加 EPG
+    // 修改：添加 EPG (增加非空校验)
     addEpg() {
+        const len = this.settings.epgs.length;
+        if (len > 0 && !this.settings.epgs[len - 1].url.trim()) {
+            return this.showToast('请先填写当前的 EPG 地址', 'warning'); // 使用 warning 类型的 toast
+        }
         this.settings.epgs.push({ url: '', enabled: true });
     },
 
@@ -264,7 +268,13 @@ export const uiMethods = `
     },
 
     // --- 直播源管理 ---
+    // 修改：添加直播源 (增加非空校验)
     addSource() {
+        const len = this.channelForm.sources.length;
+        // 如果有上一个源，且该源地址为空，则阻止添加
+        if (len > 0 && !this.channelForm.sources[len - 1].url.trim()) {
+            return this.showToast('请先填写当前的直播源链接', 'warning'); // 假设 toast 支持 'warning' 类型，或者样式
+        }
         this.channelForm.sources.push({ url: '', enabled: true, isPrimary: false });
         if (this.channelForm.sources.length === 1) {
             this.channelForm.sources[0].isPrimary = true;
