@@ -39,7 +39,7 @@ export const layoutTemplate = `
                         <h5 class="mb-0">快捷操作</h5>
                         <div>
                             <button class="btn btn-sm btn-outline-secondary me-2" @click="openGroupManager">📁 分组管理</button>
-                            <button class="btn btn-sm btn-outline-secondary" @click="openSettingsModal">⚙️ 全局设置</button>
+                            <button class="btn btn-sm btn-outline-secondary" @click="openSettingsModal">⚙️ M3U 参数</button>
                         </div>
                 </div>
                 <div class="col-md-5"><input type="file" class="form-control" @change="handleFileUpload" accept=".m3u,.m3u8"></div>

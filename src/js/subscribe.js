@@ -20,7 +20,7 @@ export async function handleM3uExport(request, env) {
 
         if (!channels || !Array.isArray(channels)) return new Response("#EXTM3U", { headers: corsHeaders });
 
-        // --- 核心：根据分组顺序重排频道 ---
+        // 根据分组顺序重排频道
         if (groups && Array.isArray(groups)) {
             const groupOrder = {};
             groups.forEach((g, i) => { groupOrder[g] = i; });
@@ -40,13 +40,24 @@ export async function handleM3uExport(request, env) {
                 return indexA - indexB;
             });
         }
-        // -------------------------------
 
         let m3uContent = "#EXTM3U";
         
-        // 拼接头部全局配置信息
         if (settings) {
-            if (settings.epgUrl) m3uContent += ` x-tvg-url="${settings.epgUrl}"`;
+            // 处理 EPG：优先使用新的 epgs 数组，兼容旧的 epgUrl
+            let epgUrlStr = "";
+            if (Array.isArray(settings.epgs) && settings.epgs.length > 0) {
+                // 过滤已启用的并拼接
+                epgUrlStr = settings.epgs
+                    .filter(e => e.enabled && e.url)
+                    .map(e => e.url)
+                    .join(',');
+            } else if (settings.epgUrl) {
+                // 旧版兼容
+                epgUrlStr = settings.epgUrl;
+            }
+
+            if (epgUrlStr) m3uContent += ` x-tvg-url="${epgUrlStr}"`;
             if (settings.catchup) m3uContent += ` catchup="${settings.catchup}"`;
             if (settings.catchupSource) m3uContent += ` catchup-source="${settings.catchupSource}"`;
         }

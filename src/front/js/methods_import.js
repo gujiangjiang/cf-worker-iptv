@@ -7,24 +7,17 @@ export const importMethods = `
         return name.replace(/[-_\\s]/g, '').toUpperCase();
     },
 
-    // 数据标准化：核心迁移逻辑
     standardizeChannel(ch) {
         let sources = [];
-        
-        // 1. 处理旧数据 sources (如果是对象数组)
         if (Array.isArray(ch.sources) && ch.sources.length > 0 && typeof ch.sources[0] === 'object') {
             sources = ch.sources;
-        } 
-        // 2. 处理中间态数据 urls (字符串数组)
-        else if (Array.isArray(ch.urls)) {
+        } else if (Array.isArray(ch.urls)) {
             sources = ch.urls.filter(u => u && u.trim()).map((u, idx) => ({
                 url: u,
                 enabled: true,
-                isPrimary: idx === 0 // 默认第一个为主源
+                isPrimary: idx === 0 
             }));
-        } 
-        // 3. 处理最老数据 url (单字符串)
-        else if (ch.url) {
+        } else if (ch.url) {
             sources = [{
                 url: ch.url,
                 enabled: true,
@@ -32,7 +25,6 @@ export const importMethods = `
             }];
         }
 
-        // 确保至少有一个主源 (如果存在源的话)
         if (sources.length > 0 && !sources.some(s => s.isPrimary && s.enabled)) {
             if(sources[0].enabled) sources[0].isPrimary = true;
         }
@@ -45,7 +37,7 @@ export const importMethods = `
             name: displayName,
             tvgName: tvgName,
             logo: ch.logo || '',
-            useLogo: !!ch.logo, // 如果有 logo 则默认开启
+            useLogo: !!ch.logo, 
             sources: sources
         };
     },
@@ -74,7 +66,11 @@ export const importMethods = `
             const sourceMatch = headerLine.match(/catchup-source="([^"]*)"/);
             
             if(epgMatch || catchupMatch || sourceMatch) {
-                if(epgMatch) this.settings.epgUrl = epgMatch[1];
+                if(epgMatch) {
+                    // 修改：支持解析多个逗号分隔的 EPG
+                    const urls = epgMatch[1].split(',');
+                    this.settings.epgs = urls.filter(u => u.trim()).map(u => ({ url: u.trim(), enabled: true }));
+                }
                 if(catchupMatch) this.settings.catchup = catchupMatch[1];
                 if(sourceMatch) this.settings.catchupSource = sourceMatch[1];
                 settingsUpdated = true;
@@ -125,7 +121,7 @@ export const importMethods = `
             return;
         }
 
-        if(settingsUpdated) this.showToast('已自动提取并更新全局设置', 'success');
+        if(settingsUpdated) this.showToast('已自动提取并更新 M3U 参数', 'success');
         this.processImports(rawChannels);
     },
 
@@ -147,7 +143,7 @@ export const importMethods = `
         const uniqueNewChannels = [];
         const tempMap = new Map();
         rawChannels.forEach(ch => {
-            ch = this.standardizeChannel(ch); // 确保数据结构最新
+            ch = this.standardizeChannel(ch); 
             const key = this.normalizeName(ch.name);
             if (!key) { uniqueNewChannels.push(ch); return; }
             if (tempMap.has(key)) {

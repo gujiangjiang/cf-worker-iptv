@@ -64,6 +64,23 @@ export const uiMethods = `
         });
     },
 
+    // 新增：EPG 列表排序
+    initEpgSortable() {
+        const el = document.getElementById('epg-list-container');
+        if (!el) return;
+        if (this.epgSortableInstance) this.epgSortableInstance.destroy();
+        this.epgSortableInstance = Sortable.create(el, {
+            handle: '.epg-drag-handle',
+            animation: 150,
+            ghostClass: 'sortable-ghost',
+            onEnd: (evt) => {
+                const item = this.settings.epgs[evt.oldIndex];
+                this.settings.epgs.splice(evt.oldIndex, 1);
+                this.settings.epgs.splice(evt.newIndex, 0, item);
+            }
+        });
+    },
+
     // 打开分组管理
     openGroupManager() {
         this.modals.groupManager = true;
@@ -117,7 +134,7 @@ export const uiMethods = `
         });
     },
 
-    // --- 批量添加频道到分组 ---
+    // --- 批量添加频道 ---
     openGroupChannelAdder(groupName) {
         this.groupAdderData.targetGroup = groupName;
         this.groupAdderData.candidates = this.channels
@@ -143,15 +160,23 @@ export const uiMethods = `
                 if(this.channels[idx]) this.channels[idx].group = target;
             });
             this.showToast(\`成功将 \${count} 个频道移动到 "\${target}"\`);
-            // 修改：移动后可能影响顺序，重新排序
             this.sortChannelsByGroup();
         }
         
         this.modals.groupChannelAdder = false;
     },
 
-    // --- 全局设置 ---
+    // --- M3U 参数 (全局设置) ---
     openSettingsModal() {
+        // 数据迁移：如果存在旧的 epgUrl 且 epgs 为空，则迁移
+        if (this.settings.epgUrl && (!this.settings.epgs || this.settings.epgs.length === 0)) {
+            this.settings.epgs = [{ url: this.settings.epgUrl, enabled: true }];
+            delete this.settings.epgUrl;
+        }
+        // 初始化数组
+        if (!this.settings.epgs) this.settings.epgs = [];
+
+        // 回看模式初始化
         const source = this.settings.catchupSource;
         if (source === '?playseek=\${(b)yyyyMMddHHmmss}-\${(e)yyyyMMddHHmmss}') {
             this.catchupMode = 'append';
@@ -161,6 +186,17 @@ export const uiMethods = `
             this.catchupMode = 'custom';
         }
         this.modals.settings = true;
+        this.$nextTick(() => this.initEpgSortable());
+    },
+
+    // 新增：添加 EPG
+    addEpg() {
+        this.settings.epgs.push({ url: '', enabled: true });
+    },
+
+    // 新增：删除 EPG
+    removeEpg(index) {
+        this.settings.epgs.splice(index, 1);
     },
 
     onCatchupModeChange() {

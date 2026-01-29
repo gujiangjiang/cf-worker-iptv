@@ -7,7 +7,7 @@ export const dataContent = `
     channels: [],
     groups: [],
     settings: {
-        epgUrl: '',
+        epgs: [], // 修改：改为对象数组 [{ url: '', enabled: true }]
         catchup: '',
         catchupSource: ''
     },
@@ -19,8 +19,9 @@ export const dataContent = `
     importUrl: '',
     baseUrl: window.location.origin,
     sortableInstance: null,
-    sourceSortableInstance: null, // 新增：模态框内源列表的排序实例
-    groupSortableInstance: null, // 新增：分组排序实例
+    sourceSortableInstance: null,
+    groupSortableInstance: null,
+    epgSortableInstance: null, // 新增：EPG 列表排序实例
 
     modals: {
         settings: false,
@@ -37,7 +38,7 @@ export const dataContent = `
         selectedIndices: []
     },
 
-    // 新增：分组频道查看器数据
+    // 分组频道查看器数据
     groupViewerData: {
         groupName: '',
         list: [] // { name, url, ... }

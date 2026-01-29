@@ -27,7 +27,7 @@ export const modalTemplate = `
     </div>
 
     <div v-if="modals.groupChannelAdder" class="modal-overlay" style="z-index: 1080;" @click.self="modals.groupChannelAdder = false">
-        <div class="modal-dialog">
+        <div class="modal-dialog modal-dialog-scrollable">
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title">添加频道到 "{{ groupAdderData.targetGroup }}"</h5>
@@ -67,9 +67,10 @@ export const modalTemplate = `
                     </div>
                     <div v-else style="max-height: 60vh; overflow-y: auto;">
                         <ul class="list-group list-group-flush">
-                            <li v-for="(ch, idx) in groupViewerData.list" :key="idx" class="list-group-item d-flex justify-content-between align-items-center">
+                            <li v-for="(ch, idx) in groupViewerData.list" :key="idx" class="list-group-item d-flex align-items-center">
                                 <span class="text-truncate flex-grow-1 me-2" :title="ch.name">{{ ch.name }}</span>
-                                <span class="badge bg-light text-dark flex-shrink-0 border">{{ ch.sources.length }}个源</span>
+                                <span class="badge bg-light text-dark flex-shrink-0 border me-2">{{ ch.sources.length }}个源</span>
+                                <button class="btn btn-sm btn-outline-primary border-0" @click="openEditChannelFromViewer(ch.originalIndex)" title="编辑频道">✏️</button>
                             </li>
                         </ul>
                     </div>
@@ -180,9 +181,7 @@ export const modalTemplate = `
                         <li class="list-group-item d-flex align-items-center gap-2" v-for="(g, idx) in groups" :key="g">
                             <span class="group-drag-handle">⠿</span>
                             <span class="flex-grow-1 text-truncate">{{ g }}</span>
-                            
                             <span class="badge bg-secondary rounded-pill">{{ getGroupCount(g) }}</span>
-                            
                             <button class="btn btn-sm btn-outline-info text-nowrap ms-1" @click="viewGroupChannels(g)" title="查看频道">👁️</button>
                             <button class="btn btn-sm btn-outline-success text-nowrap" @click="openGroupChannelAdder(g)" title="从默认分组批量添加频道">➕</button>
                             <button class="btn btn-sm btn-outline-danger border-0" @click="openConfirmModal('deleteGroup', idx)">✖</button>
@@ -200,17 +199,33 @@ export const modalTemplate = `
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title">⚙️ 全局设置</h5>
+                    <h5 class="modal-title">⚙️ M3U 参数设置</h5>
                     <button type="button" class="btn-close" @click="modals.settings = false"></button>
                 </div>
                 <div class="modal-body">
-                    <div class="mb-3">
-                        <label class="form-label">EPG XML 地址</label>
-                        <input type="text" class="form-control" v-model="settings.epgUrl" placeholder="例如: https://e.xml">
+                    <div class="mb-4">
+                        <label class="form-label d-flex justify-content-between align-items-center">
+                            <span>📅 EPG 来源 (支持多选/排序)</span>
+                            <button class="btn btn-sm btn-outline-primary" @click="addEpg">+ 添加 EPG 源</button>
+                        </label>
+                        <div class="list-group" id="epg-list-container">
+                            <div v-for="(item, idx) in settings.epgs" :key="idx" class="list-group-item d-flex align-items-center gap-2">
+                                <span class="epg-drag-handle text-secondary fs-5" style="cursor: grab;">⠿</span>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" v-model="item.enabled" title="启用/禁用">
+                                </div>
+                                <input type="text" class="form-control form-control-sm" v-model="item.url" placeholder="https://epg.xml...">
+                                <button class="btn btn-sm btn-outline-danger border-0" @click="removeEpg(idx)">✖</button>
+                            </div>
+                        </div>
+                        <div v-if="settings.epgs.length === 0" class="text-center text-muted py-2 border rounded border-dashed bg-light small">
+                            暂无 EPG 源，请点击添加
+                        </div>
                     </div>
+
                     <div class="row g-3">
                         <div class="col-md-6">
-                            <label class="form-label">回看模式</label>
+                            <label class="form-label">回看模式 (Catchup Mode)</label>
                             <select class="form-select" v-model="settings.catchup">
                                 <option value="">禁用</option>
                                 <option value="append">追加</option>
@@ -221,7 +236,7 @@ export const modalTemplate = `
                             </select>
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label">回看源规则</label>
+                            <label class="form-label">回看源规则 (Catchup Source)</label>
                             <select class="form-select mb-2" v-model="catchupMode" @change="onCatchupModeChange">
                                 <option value="append">通用追加格式 (年月日时分秒)</option>
                                 <option value="timestamp">通用时间戳格式</option>
@@ -235,11 +250,12 @@ export const modalTemplate = `
                     <div class="mt-4">
                         <label class="form-label small text-muted">当前配置预览 (M3U 头部标签)</label>
                         <div class="p-3 bg-light border rounded font-monospace small text-break">
-                            <span v-if="settings.catchup || settings.catchupSource">
-                                <span v-if="settings.catchup">catchup="{{settings.catchup}}"</span>
-                                <span v-if="settings.catchupSource" class="ms-2">catchup-source="{{settings.catchupSource}}"</span>
-                            </span>
-                            <span v-else class="text-muted fst-italic">暂未配置回看参数</span>
+                            <div v-if="settings.epgs.filter(e=>e.enabled).length > 0" class="mb-1">
+                                x-tvg-url="{{ settings.epgs.filter(e=>e.enabled).map(e=>e.url).join(',') }}"
+                            </div>
+                            <div v-if="settings.catchup">catchup="{{settings.catchup}}"</div>
+                            <div v-if="settings.catchupSource">catchup-source="{{settings.catchupSource}}"</div>
+                            <div v-if="!settings.catchup && !settings.catchupSource && settings.epgs.filter(e=>e.enabled).length === 0" class="text-muted fst-italic">暂未配置参数</div>
                         </div>
                     </div>
                 </div>

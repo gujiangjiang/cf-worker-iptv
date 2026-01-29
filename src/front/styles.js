@@ -7,38 +7,31 @@ export const cssContent = `
     .drag-handle { cursor: grab; user-select: none; }
     .drag-handle:active { cursor: grabbing; }
     .sortable-ghost { background-color: #e9ecef !important; opacity: 0.5; }
-    
-    /* Toast 层级大大提高，防止被虚化背景影响 */
-    .toast-container { z-index: 2000 !important; }
-    
     .loading-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.8); z-index: 9999; display: flex; justify-content: center; align-items: center; }
     .toast-enter-active, .toast-leave-active { transition: all 0.3s ease; }
     .toast-enter-from, .toast-leave-to { opacity: 0; transform: translateY(-20px); }
     
+    /* 提高 Toast 层级 */
+    .toast-container { z-index: 2000 !important; }
+    
     .floating-save-btn { width: 60px; height: 60px; font-size: 26px; border-radius: 50%; box-shadow: 0 4px 15px rgba(0,0,0,0.3); z-index: 1030; display: flex; align-items: center; justify-content: center; transition: transform 0.2s; }
     .floating-save-btn:hover { transform: scale(1.1); }
 
-    /* 通用模态框 */
+    /* 模态框美化 */
     .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.5); z-index: 1060; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(3px); }
     
-    /* 确认弹窗层级更高，需要覆盖在编辑弹窗之上 */
+    /* 确认弹窗层级 */
     .confirm-modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.6); z-index: 1100; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(2px); }
 
     .modal-content { border: none; border-radius: 12px; box-shadow: 0 15px 40px rgba(0,0,0,0.25); background-color: #fff; overflow: hidden; }
     .modal-header { background-color: #e7f1ff; color: #004085; border-bottom: none; padding: 15px 25px; }
     .modal-body { padding: 25px; background-color: #fff; }
     .modal-footer { border-top: 1px solid #f0f0f0; padding: 15px 25px; background-color: #fff; }
-
-    /* 危险操作头部红色警示 */
     .modal-header.bg-danger-subtle { background-color: #f8d7da; color: #842029; }
 
     /* Logo 预览框 */
     .logo-preview-box {
-        height: 38px;
-        width: auto;
-        min-width: 40px;
-        max-width: 120px;
-        padding: 0 5px;
+        width: 40px; height: 38px;
         background-color: #f8f9fa;
         border: 1px solid #ced4da;
         border-radius: 4px;
@@ -53,9 +46,13 @@ export const cssContent = `
     .source-drag-handle { cursor: grab; color: #adb5bd; }
     .source-drag-handle:hover { color: #6c757d; }
     
-    /* 分组列表样式 */
+    /* 分组拖拽手柄 */
     .group-drag-handle { cursor: grab; color: #adb5bd; font-size: 1.2rem; }
     .group-drag-handle:hover { color: #6c757d; }
+
+    /* EPG 拖拽手柄 */
+    .epg-drag-handle { cursor: grab; color: #adb5bd; }
+    .epg-drag-handle:hover { color: #6c757d; }
 
     /* 冲突卡片 */
     .conflict-card { background-color: #fff; width: 600px; max-width: 90%; border-radius: 12px; box-shadow: 0 15px 40px rgba(0,0,0,0.3); overflow: hidden; display: flex; flex-direction: column; }
