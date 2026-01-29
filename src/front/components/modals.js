@@ -1,6 +1,6 @@
 /**
  * 组件：模态框集合
- * 包含：二次确认、频道编辑、分组管理、批量添加、全局设置、冲突处理
+ * 包含：二次确认、频道编辑、分组管理、批量添加、全局设置、冲突处理、分组查看
  */
 export const modalTemplate = `
     <div v-if="confirmModal.show" class="confirm-modal-overlay">
@@ -49,6 +49,31 @@ export const modalTemplate = `
                     <span class="me-auto small text-muted">已选: {{ groupAdderData.selectedIndices.length }}</span>
                     <button class="btn btn-secondary" @click="modals.groupChannelAdder = false">取消</button>
                     <button class="btn btn-primary" @click="saveGroupChannels" :disabled="groupAdderData.selectedIndices.length === 0">确认添加</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div v-if="modals.groupViewer" class="modal-overlay" style="z-index: 1090;" @click.self="modals.groupViewer = false">
+        <div class="modal-dialog modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">📂 {{ groupViewerData.groupName }} ({{ groupViewerData.list.length }})</h5>
+                    <button type="button" class="btn-close" @click="modals.groupViewer = false"></button>
+                </div>
+                <div class="modal-body">
+                    <div v-if="groupViewerData.list.length === 0" class="text-center py-4 text-muted border rounded border-dashed">
+                        该分组下暂无频道
+                    </div>
+                    <ul v-else class="list-group list-group-flush">
+                        <li v-for="(ch, idx) in groupViewerData.list" :key="idx" class="list-group-item d-flex justify-content-between align-items-center">
+                            <span class="text-truncate">{{ ch.name }}</span>
+                            <span class="badge bg-light text-dark">{{ ch.sources.length }}个源</span>
+                        </li>
+                    </ul>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-primary" @click="modals.groupViewer = false">关闭</button>
                 </div>
             </div>
         </div>
@@ -139,11 +164,25 @@ export const modalTemplate = `
                         <input type="text" class="form-control" v-model="newGroupInput" placeholder="输入新分组名称" @keyup.enter="addGroup">
                         <button class="btn btn-outline-primary" @click="addGroup">添加</button>
                     </div>
+                    
+                    <div class="list-group mb-2 border-bottom pb-2">
+                        <div class="list-group-item d-flex align-items-center gap-2 bg-light border-0">
+                            <span class="text-secondary text-center" style="width: 1.2rem;">🔒</span>
+                            <span class="flex-grow-1 fw-bold">默认 (未分组)</span>
+                            <span class="badge bg-secondary rounded-pill">{{ getGroupCount('默认') }}</span>
+                            <button class="btn btn-sm btn-outline-info text-nowrap ms-2" @click="viewGroupChannels('默认')">👁️ 查看</button>
+                        </div>
+                    </div>
+
                     <ul class="list-group" id="group-list-container" style="max-height: 400px; overflow-y: auto;">
                         <li class="list-group-item d-flex align-items-center gap-2" v-for="(g, idx) in groups" :key="g">
                             <span class="group-drag-handle">⠿</span>
                             <span class="flex-grow-1 text-truncate">{{ g }}</span>
-                            <button class="btn btn-sm btn-outline-success text-nowrap" @click="openGroupChannelAdder(g)" title="从默认分组批量添加频道">➕ 频道</button>
+                            
+                            <span class="badge bg-secondary rounded-pill">{{ getGroupCount(g) }}</span>
+                            
+                            <button class="btn btn-sm btn-outline-info text-nowrap ms-1" @click="viewGroupChannels(g)" title="查看频道">👁️</button>
+                            <button class="btn btn-sm btn-outline-success text-nowrap" @click="openGroupChannelAdder(g)" title="从默认分组批量添加频道">➕</button>
                             <button class="btn btn-sm btn-outline-danger border-0" @click="openConfirmModal('deleteGroup', idx)">✖</button>
                         </li>
                     </ul>

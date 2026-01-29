@@ -67,6 +67,18 @@ export const uiMethods = `
         this.$nextTick(() => this.initGroupSortable());
     },
 
+    // 新增：获取分组下频道数量
+    getGroupCount(groupName) {
+        return this.channels.filter(ch => ch.group === groupName).length;
+    },
+
+    // 新增：查看分组内的频道列表
+    viewGroupChannels(groupName) {
+        this.groupViewerData.groupName = groupName;
+        this.groupViewerData.list = this.channels.filter(ch => ch.group === groupName);
+        this.modals.groupViewer = true;
+    },
+
     // --- 批量添加频道到分组 ---
     openGroupChannelAdder(groupName) {
         this.groupAdderData.targetGroup = groupName;
@@ -101,7 +113,6 @@ export const uiMethods = `
 
     // --- 全局设置 ---
     openSettingsModal() {
-        // 打开时判断当前规则是否匹配预设
         const source = this.settings.catchupSource;
         if (source === '?playseek=\${(b)yyyyMMddHHmmss}-\${(e)yyyyMMddHHmmss}') {
             this.catchupMode = 'append';
@@ -114,13 +125,11 @@ export const uiMethods = `
     },
 
     onCatchupModeChange() {
-        // 切换模式时自动填充
         if (this.catchupMode === 'append') {
             this.settings.catchupSource = '?playseek=\${(b)yyyyMMddHHmmss}-\${(e)yyyyMMddHHmmss}';
         } else if (this.catchupMode === 'timestamp') {
             this.settings.catchupSource = '?playseek=\${(b)timestamp}-\${(e)timestamp}';
         }
-        // 如果是 custom，保留当前值供用户编辑，或者置空也可以，这里选择保留体验更好
     },
 
     // --- 频道编辑/新增 ---
@@ -128,7 +137,7 @@ export const uiMethods = `
         this.editMode = false;
         this.editingIndex = -1;
         this.channelForm = {
-            group: '默认', // 修改：新增频道时，默认分组设为"默认"，不再选择第一个自定义分组
+            group: '默认',
             name: '', tvgName: '',
             useLogo: false, logo: '',
             sources: [] 
@@ -138,14 +147,11 @@ export const uiMethods = `
         this.$nextTick(() => this.initSourceSortable());
     },
 
-    // 打开编辑模式
     openEditChannelModal(index) {
         this.editMode = true;
         this.editingIndex = index;
         const ch = this.channels[index];
-        // 深拷贝防止直接修改
         this.channelForm = JSON.parse(JSON.stringify(ch));
-        // 修改：编辑时，如果该频道分组为空，也强制设为默认
         if (!this.channelForm.group) {
             this.channelForm.group = '默认';
         }
@@ -154,13 +160,10 @@ export const uiMethods = `
         this.$nextTick(() => this.initSourceSortable());
     },
 
-    // 保存频道
     saveChannel() {
-        // 校验
         if(!this.channelForm.name) return this.showToast('频道名称不能为空', 'error');
         if(this.channelForm.sources.length === 0) return this.showToast('至少需要一个直播源', 'error');
         
-        // 构造数据
         const channelData = {
             ...this.channelForm,
             tvgName: this.channelForm.tvgName || this.channelForm.name,
@@ -177,7 +180,6 @@ export const uiMethods = `
         this.modals.channelEditor = false;
     },
 
-    // --- Logo 相关 ---
     checkLogo() {
         if(this.channelForm.logo) {
             this.logoPreviewUrl = this.channelForm.logo;
@@ -187,23 +189,20 @@ export const uiMethods = `
     // --- 直播源管理 ---
     addSource() {
         this.channelForm.sources.push({ url: '', enabled: true, isPrimary: false });
-        // 如果只有一个源，自动设为主源
         if (this.channelForm.sources.length === 1) {
             this.channelForm.sources[0].isPrimary = true;
         }
     },
     
-    // 统一的确认弹窗触发器 (核心修改)
+    // 统一的确认弹窗触发器
     openConfirmModal(actionType, index = -1) {
-        // 重置状态
         this.confirmModal.actionType = actionType;
         this.confirmModal.targetIndex = index;
         this.confirmModal.inputPassword = '';
         this.confirmModal.requirePassword = false;
-        this.confirmModal.type = 'danger'; // 默认为红色危险弹窗
+        this.confirmModal.type = 'danger'; 
         this.confirmModal.show = true;
 
-        // 根据类型配置文案
         switch(actionType) {
             case 'deleteSource':
                 this.confirmModal.title = '确认删除源';
@@ -239,13 +238,12 @@ export const uiMethods = `
         }
     },
 
-    // 执行确认操作 (逻辑保持统一)
+    // 执行确认操作
     executeConfirm() {
         const { actionType, targetIndex, inputPassword } = this.confirmModal;
 
         if (actionType === 'deleteSource') {
             this.channelForm.sources.splice(targetIndex, 1);
-            // 删除后若只剩一个，自动设为主源
             if (this.channelForm.sources.length === 1) {
                 this.channelForm.sources[0].isPrimary = true;
             }
@@ -257,14 +255,11 @@ export const uiMethods = `
         }
         else if (actionType === 'deleteGroup') {
             const groupName = this.groups[targetIndex];
-            // 归还频道到默认分组
             this.channels.forEach(ch => { if(ch.group === groupName) ch.group = '默认'; });
-            // 删除分组
             this.groups.splice(targetIndex, 1);
             this.showToast('分组已删除');
         }
         else if (actionType === 'clearAll') {
-            // 验证密码
             if (inputPassword !== this.password) {
                 return this.showToast('密码错误，无法清空', 'error');
             }
@@ -281,7 +276,7 @@ export const uiMethods = `
             source.isPrimary = false;
         }
     },
-    // 单选逻辑：设置当前为主源，其他置否
+    
     setPrimarySource(idx) {
         this.channelForm.sources.forEach((s, i) => {
             s.isPrimary = (i === idx);
@@ -296,10 +291,11 @@ export const uiMethods = `
         this.groups.push(val);
         this.newGroupInput = '';
     },
-    // 删除分组入口统一使用 openConfirmModal
+    
     removeGroup(index) {
         this.openConfirmModal('deleteGroup', index);
     },
+    
     syncGroupsFromChannels() {
         const extracted = new Set(this.channels.map(c => c.group || '默认'));
         const merged = new Set([...this.groups, ...extracted]);

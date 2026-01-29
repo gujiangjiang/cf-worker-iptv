@@ -25,15 +25,22 @@ export const dataContent = `
     modals: {
         settings: false,
         channelEditor: false,
-        groupManager: false,         // <--- 这里的逗号必须有
-        groupChannelAdder: false     // 新增：批量添加频道模态框
+        groupManager: false,
+        groupChannelAdder: false,
+        groupViewer: false       // 新增：分组频道查看器
     },
 
-    // 新增：批量添加频道数据状态
+    // 批量添加频道数据状态
     groupAdderData: {
         targetGroup: '',
-        candidates: [], // { idx, name, ... }
-        selectedIndices: [] // [originalIndex1, originalIndex2...]
+        candidates: [],
+        selectedIndices: []
+    },
+
+    // 新增：分组频道查看器数据
+    groupViewerData: {
+        groupName: '',
+        list: [] // { name, url, ... }
     },
 
     // 通用确认模态框状态
