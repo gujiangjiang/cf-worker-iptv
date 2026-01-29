@@ -1,34 +1,27 @@
 /**
- * API 请求逻辑 (CRUD, Auth)
+ * API 请求逻辑 (CRUD, Auth) - 修复版
  */
 export const apiLogic = `
     async initGuest() {
         this.loading = true;
         try {
-            const res = await fetch('/api/guest/config');
-            if (res.ok) {
-                this.publicGuestConfig = await res.json();
-                if (this.publicGuestConfig.allowViewList) {
-                    await this.tryLoadList(); 
-                }
+            // 访客接口不需要密码，但也兼容 fetchApi
+            const config = await this.fetchApi('/api/guest/config');
+            this.publicGuestConfig = config;
+            if (config.allowViewList) {
+                await this.tryLoadList(); 
             }
-        } catch (e) { console.error(e); }
+        } catch (e) { console.log('Guest init:', e.message); }
         this.loading = false;
     },
 
     async tryLoadList() {
-        const headers = {};
-        if (this.password) headers['Authorization'] = this.password;
         try {
-            const listRes = await fetch('/api/list', { headers });
-            if (listRes.ok) {
-                const rawList = await listRes.json();
-                this.channels = rawList.map(this.standardizeChannel);
-                this.$nextTick(() => { this.initSortable(); });
-                return true;
-            }
-        } catch(e) { console.error(e); }
-        return false;
+            const rawList = await this.fetchApi('/api/list');
+            this.channels = rawList.map(this.standardizeChannel);
+            this.$nextTick(() => { this.initSortable(); });
+            return true;
+        } catch(e) { return false; }
     },
 
     async login(arg) {
@@ -37,50 +30,51 @@ export const apiLogic = `
 
         this.loading = true;
         try {
-            const [listRes, settingsRes, groupsRes] = await Promise.all([
-                fetch('/api/list', { headers: { 'Authorization': this.password } }),
-                fetch('/api/settings', { headers: { 'Authorization': this.password } }),
-                fetch('/api/groups', { headers: { 'Authorization': this.password } })
+            const [rawList, remoteSettings, remoteGroups] = await Promise.all([
+                this.fetchApi('/api/list', { skipAuthToast: isAutoLogin }),
+                this.fetchApi('/api/settings', { skipAuthToast: isAutoLogin }),
+                this.fetchApi('/api/groups', { skipAuthToast: isAutoLogin })
             ]);
 
-            if(listRes.status === 401 || settingsRes.status === 401) {
-                if (!isAutoLogin) this.showToast('密码错误', 'error');
-                localStorage.removeItem('iptv_pwd');
-            } else {
-                const rawList = await listRes.json();
-                this.channels = rawList.map(this.standardizeChannel);
+            // 1. 处理列表
+            this.channels = rawList.map(this.standardizeChannel);
 
-                const remoteSettings = await settingsRes.json();
-                this.settings = { 
-                    ...this.settings, 
-                    ...remoteSettings,
-                    guestConfig: { 
-                        allowViewList: false, allowSub: true, allowFormats: ['m3u', 'txt'],
-                        ...remoteSettings.guestConfig
-                    }
-                };
-                
-                let remoteGroups = await groupsRes.json();
-                if (!remoteGroups || remoteGroups.length === 0) {
-                    const extracted = new Set(this.channels.map(c => c.group).filter(g => g && g !== '默认'));
-                    remoteGroups = Array.from(extracted);
-                } else {
-                    remoteGroups = remoteGroups.filter(g => g !== '默认');
+            // 2. 处理设置
+            this.settings = { 
+                ...this.settings, 
+                ...remoteSettings,
+                guestConfig: { 
+                    allowViewList: false, allowSub: true, allowFormats: ['m3u', 'txt'],
+                    ...remoteSettings.guestConfig
                 }
-                this.groups = remoteGroups;
-
-                this.isAuth = true;
-                this.modals.login = false; 
-                localStorage.setItem('iptv_pwd', this.password);
-                this.publicGuestConfig = JSON.parse(JSON.stringify(this.settings.guestConfig));
-
-                this.sortChannelsByGroup();
-                this.$nextTick(() => { this.initSortable(); });
-                if (!isAutoLogin) this.showToast('登录成功', 'success');
+            };
+            
+            // 3. 处理分组
+            let groups = remoteGroups;
+            if (!groups || groups.length === 0) {
+                const extracted = new Set(this.channels.map(c => c.group).filter(g => g && g !== '默认'));
+                groups = Array.from(extracted);
+            } else {
+                groups = groups.filter(g => g !== '默认');
             }
+            this.groups = groups;
+
+            // 登录成功
+            this.isAuth = true;
+            this.modals.login = false; 
+            localStorage.setItem('iptv_pwd', this.password);
+            this.publicGuestConfig = JSON.parse(JSON.stringify(this.settings.guestConfig));
+
+            this.sortChannelsByGroup();
+            this.$nextTick(() => { this.initSortable(); });
+            
+            if (!isAutoLogin) this.showToast('登录成功', 'success');
+
         } catch(e) {
             console.error(e);
-            if (!isAutoLogin) this.showToast('连接服务器失败', 'error');
+            if (!isAutoLogin && e.message !== 'Unauthorized') {
+                this.showToast('连接服务器失败', 'error');
+            }
         }
         this.loading = false;
     },
@@ -98,48 +92,47 @@ export const apiLogic = `
     async saveSettingsOnly() {
         this.loading = true;
         try {
-            const res = await fetch('/api/settings', {
+            // 修复：添加 returnText: true，防止解析纯文本响应时报错
+            await this.fetchApi('/api/settings', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Authorization': this.password },
-                body: JSON.stringify(this.settings)
+                body: JSON.stringify(this.settings),
+                returnText: true 
             });
-            if(res.ok) {
-                this.showToast('系统设置已保存', 'success');
-                this.publicGuestConfig = JSON.parse(JSON.stringify(this.settings.guestConfig));
-            } else {
-                this.showToast('保存设置失败', 'error');
-            }
-        } catch(e) { this.showToast('保存设置请求出错', 'error'); }
+            this.showToast('系统设置已保存', 'success');
+            this.publicGuestConfig = JSON.parse(JSON.stringify(this.settings.guestConfig));
+        } catch(e) { 
+            this.showToast('保存设置失败: ' + e.message, 'error'); 
+        }
         this.loading = false;
     },
 
     async saveData() {
         this.loading = true;
         try {
-            const [resList, resSettings, resGroups] = await Promise.all([
-                fetch('/api/save', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'Authorization': this.password },
-                    body: JSON.stringify(this.channels)
+            // 修复：所有保存接口均添加 returnText: true
+            await Promise.all([
+                this.fetchApi('/api/save', { 
+                    method: 'POST', 
+                    body: JSON.stringify(this.channels),
+                    returnText: true 
                 }),
-                fetch('/api/settings', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'Authorization': this.password },
-                    body: JSON.stringify(this.settings)
+                this.fetchApi('/api/settings', { 
+                    method: 'POST', 
+                    body: JSON.stringify(this.settings),
+                    returnText: true 
                 }),
-                fetch('/api/groups', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'Authorization': this.password },
-                    body: JSON.stringify(this.groups)
+                this.fetchApi('/api/groups', { 
+                    method: 'POST', 
+                    body: JSON.stringify(this.groups),
+                    returnText: true 
                 })
             ]);
 
-            if(resList.ok && resSettings.ok && resGroups.ok) {
-                this.showToast('保存成功！', 'success');
-                this.publicGuestConfig = JSON.parse(JSON.stringify(this.settings.guestConfig));
-            }
-            else this.showToast('保存失败', 'error');
-        } catch(e) { this.showToast('保存请求出错', 'error'); }
+            this.showToast('保存成功！', 'success');
+            this.publicGuestConfig = JSON.parse(JSON.stringify(this.settings.guestConfig));
+        } catch(e) { 
+            this.showToast('保存失败: ' + e.message, 'error'); 
+        }
         this.loading = false;
     }
 `;

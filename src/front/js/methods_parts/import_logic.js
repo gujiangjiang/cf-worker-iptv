@@ -1,5 +1,5 @@
 /**
- * 导入处理逻辑 (解析, 网络请求, 冲突解决)
+ * 导入处理逻辑 (解析, 网络请求, 冲突解决) - 深度优化版
  */
 export const importLogic = `
     handleFileUpload(event) {
@@ -18,21 +18,18 @@ export const importLogic = `
         if (!this.importUrl) return this.showToast('请输入有效的 URL', 'error');
         this.loading = true;
         try {
-            const res = await fetch('/api/fetch-m3u', {
+            // 使用 returnText: true 获取文本内容
+            const text = await this.fetchApi('/api/fetch-m3u', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Authorization': this.password },
-                body: JSON.stringify({ url: this.importUrl })
+                body: JSON.stringify({ url: this.importUrl }),
+                returnText: true
             });
-            if (res.ok) {
-                const text = await res.text();
-                this.parseM3U(text);
-                this.importUrl = '';
-                this.modals.import = false;
-            } else {
-                this.showToast('导入失败: ' + res.statusText, 'error');
-            }
+            
+            this.parseM3U(text);
+            this.importUrl = '';
+            this.modals.import = false;
         } catch (e) {
-            this.showToast('网络请求出错，请检查链接', 'error');
+            this.showToast('导入失败: ' + e.message, 'error');
         }
         this.loading = false;
     },
