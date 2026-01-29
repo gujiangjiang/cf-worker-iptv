@@ -40,16 +40,21 @@ export const importMethods = `
         const lines = content.split('\\n');
         
         const headerLine = lines.find(l => l.startsWith('#EXTM3U'));
+        let settingsUpdated = false;
+        
         if(headerLine) {
             const epgMatch = headerLine.match(/x-tvg-url="([^"]*)"/);
             const catchupMatch = headerLine.match(/catchup="([^"]*)"/);
             const sourceMatch = headerLine.match(/catchup-source="([^"]*)"/);
+            
             if(epgMatch || catchupMatch || sourceMatch) {
                 if(epgMatch) this.settings.epgUrl = epgMatch[1];
                 if(catchupMatch) this.settings.catchup = catchupMatch[1];
                 if(sourceMatch) this.settings.catchupSource = sourceMatch[1];
-                // 自动打开设置模态框提示用户
-                this.modals.settings = true;
+                settingsUpdated = true;
+                
+                // --- 修复：不再弹出模态框，改为 Toast 提示 ---
+                // this.modals.settings = true; 
             }
         }
 
@@ -91,6 +96,10 @@ export const importMethods = `
         if (rawChannels.length === 0) {
             this.showToast('未解析到有效频道', 'error');
             return;
+        }
+
+        if(settingsUpdated) {
+            this.showToast('已自动提取并更新全局设置(EPG/回看)', 'success');
         }
 
         this.processImports(rawChannels);
