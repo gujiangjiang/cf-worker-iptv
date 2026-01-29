@@ -13,15 +13,23 @@ export const layoutTemplate = `
         <h3>📺 IPTV 直播源管理</h3>
         
         <div class="d-flex gap-2">
-            <div class="dropdown">
+            <div class="dropdown" v-if="isAuth || publicGuestConfig.allowSub">
                 <button class="btn btn-outline-primary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
                     📡 订阅 / 导出
                 </button>
                 <ul class="dropdown-menu">
-                    <li><a class="dropdown-item" :href="baseUrl + '/m3u' + (isAuth && !settings.guestConfig.allowSub ? '?pwd='+password : '')" target="_blank">📄 标准 M3U (单源)</a></li>
-                    <li><a class="dropdown-item" :href="baseUrl + '/m3u?mode=multi' + (isAuth && !settings.guestConfig.allowSub ? '&pwd='+password : '')" target="_blank">📑 多源 M3U (同名多源)</a></li>
-                    <li><hr class="dropdown-divider"></li>
-                    <li><a class="dropdown-item" :href="baseUrl + '/txt' + (isAuth && !settings.guestConfig.allowSub ? '?pwd='+password : '')" target="_blank">📝 TXT 格式</a></li>
+                    <li v-if="isAuth || (publicGuestConfig.allowSub && publicGuestConfig.allowFormats.includes('m3u'))">
+                        <a class="dropdown-item" :href="baseUrl + '/m3u' + (isAuth && !settings.guestConfig.allowSub ? '?pwd='+password : '')" target="_blank">📄 标准 M3U (单源)</a>
+                    </li>
+                    <li v-if="isAuth || (publicGuestConfig.allowSub && publicGuestConfig.allowFormats.includes('m3u'))">
+                        <a class="dropdown-item" :href="baseUrl + '/m3u?mode=multi' + (isAuth && !settings.guestConfig.allowSub ? '&pwd='+password : '')" target="_blank">📑 多源 M3U (同名多源)</a>
+                    </li>
+                    
+                    <li v-if="isAuth || (publicGuestConfig.allowSub && publicGuestConfig.allowFormats.includes('m3u') && publicGuestConfig.allowFormats.includes('txt'))"><hr class="dropdown-divider"></li>
+                    
+                    <li v-if="isAuth || (publicGuestConfig.allowSub && publicGuestConfig.allowFormats.includes('txt'))">
+                        <a class="dropdown-item" :href="baseUrl + '/txt' + (isAuth && !settings.guestConfig.allowSub ? '?pwd='+password : '')" target="_blank">📝 TXT 格式</a>
+                    </li>
                 </ul>
             </div>
             
