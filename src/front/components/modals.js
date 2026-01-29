@@ -94,7 +94,8 @@ export const modalTemplate = `
                         <div class="col-md-4">
                             <label class="form-label">分组</label>
                             <select class="form-select" v-model="channelForm.group">
-                                <option v-for="g in groups" :key="g" :value="g">{{ g }}</option>
+                                <option value="默认">默认 (未分组)</option>
+                                <option v-for="g in groups.filter(x => x !== '默认')" :key="g" :value="g">{{ g }}</option>
                             </select>
                         </div>
                         <div class="col-md-4">
