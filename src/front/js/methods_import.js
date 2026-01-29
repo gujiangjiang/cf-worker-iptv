@@ -6,40 +6,24 @@ export const importMethods = `
         return Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
     },
 
-    // 标准化名称：用于判定“是否为同一个频道” (完全匹配)
     normalizeName(name) {
         if (!name) return '';
-        // 全角转半角
         let s = name.replace(/[\\uFF01-\\uFF5E]/g, function(c) { 
             return String.fromCharCode(c.charCodeAt(0) - 0xFEE0); 
         }).replace(/\\u3000/g, ' ');
         s = s.toUpperCase();
-        // 去除干扰字符，保留加号
         return s.replace(/[-_\\s\\.]/g, '');
     },
 
-    // 清洗名称：去除常见的后缀，用于“疑似重复”的模糊匹配
     cleanChannelName(name) {
         if (!name) return '';
         let s = name.toUpperCase();
-        
-        // 1. 精准去除 "码率+分辨率" 格式后缀 
-        // 修复：支持小数点的码率，例如 " 4.8M1080", " 18M2160"
-        // \\d+(?:\\.\\d+)? 匹配整数或小数
         s = s.replace(/(?:[\\s-_]|^)\\d+(?:\\.\\d+)?M\\d*/g, ''); 
-        
-        // 2. 去除纯分辨率后缀 (如 " 1920*1080", " 1080P")
         s = s.replace(/\\s+\\d{3,4}[\\*x]\\d{3,4}/g, '');
         s = s.replace(/\\s+\\d{3,4}P/g, '');
-
-        // 3. 去除视频属性 (FHD, HD, SD, HDR, HEVC, H.264/5)
         s = s.replace(/(?:[\\s-_]|^)(F?HD|SD|HEVC|HDR|H\\.26[45])/g, ''); 
-        
-        // 4. 去除括号内容 [xxx] (xxx)
         s = s.replace(/[\\[\\(].*?[\\]\\)]/g, ''); 
         s = s.replace(/测试/g, '');
-        
-        // 最后去除剩余符号和空格
         return s.replace(/[-_\\s]/g, ''); 
     },
 
@@ -252,9 +236,7 @@ export const importMethods = `
             
             const cleanKeyMatchIndex = this.channels.findIndex(ch => {
                 const existingClean = this.cleanChannelName(ch.name);
-                
                 if (existingClean === cleanNewKey) return true;
-                
                 if (cleanNewKey.length <= 2 || existingClean.length <= 2) return false;
 
                 let longStr, shortStr;
@@ -270,10 +252,7 @@ export const importMethods = `
 
                 const matchIndex = longStr.indexOf(shortStr);
                 const nextChar = longStr[matchIndex + shortStr.length];
-
-                if (nextChar && /\\d/.test(nextChar)) {
-                    return false;
-                }
+                if (nextChar && /\\d/.test(nextChar)) return false;
 
                 return true;
             });
@@ -323,6 +302,7 @@ export const importMethods = `
         this.conflictModal.suggestedName = conflict.suggestedName;
         
         this.conflictModal.action = conflict.matchType === 'exact' ? 'merge' : 'new'; 
+        this.conflictModal.manualTargetIndex = -1; // 重置手动选择
         
         const oldUrls = existingItem.sources.map(s => s.url);
         const newUrls = conflict.newItem.sources.map(s => s.url);
@@ -339,6 +319,7 @@ export const importMethods = `
         else if (action === 'old') {
         }
         else if (action === 'merge') {
+            // 合并到现有频道 (index)
             const newSources = mergedUrlStrings.map(u => ({
                 url: u,
                 enabled: true,
@@ -350,19 +331,45 @@ export const importMethods = `
     },
 
     resolveConflict() {
-        this.applyConflictLogic(
-            this.conflictModal.action, 
-            this.conflictModal.existingIndex, 
-            this.conflictModal.currentItem, 
-            this.conflictModal.selectedPrimary, 
-            this.conflictModal.mergedUrls
-        );
+        // 特殊处理手动模式
+        if (this.conflictModal.action === 'manual') {
+            const targetIdx = this.conflictModal.manualTargetIndex;
+            if (targetIdx === -1 || targetIdx === undefined || targetIdx === null) {
+                return this.showToast('请先选择要合并的目标频道', 'warning');
+            }
+            
+            // 重新计算合并：目标频道原有源 + 新导入源
+            const targetItem = this.channels[targetIdx];
+            const oldUrls = targetItem.sources.map(s => s.url);
+            const newUrls = this.conflictModal.currentItem.sources.map(s => s.url);
+            const mergedUrls = [...new Set([...oldUrls, ...newUrls])];
+            const primaryUrl = oldUrls.length > 0 ? oldUrls[0] : newUrls[0]; // 默认保持原有主源
+
+            this.applyConflictLogic('merge', targetIdx, null, primaryUrl, mergedUrls);
+        } else {
+            // 标准模式 (新增/丢弃/推荐合并)
+            this.applyConflictLogic(
+                this.conflictModal.action, 
+                this.conflictModal.existingIndex, 
+                this.conflictModal.currentItem, 
+                this.conflictModal.selectedPrimary, 
+                this.conflictModal.mergedUrls
+            );
+        }
+
         this.conflictModal.queue.shift();
         this.loadNextConflict();
     },
 
+    // 批量处理保持不变 (因为批量处理不涉及手动选择的复杂性)
     resolveAllConflicts() {
         const action = this.conflictModal.action;
+        
+        // 如果当前是 manual 模式，点击批量处理时，逻辑上很奇怪（不能对所有剩余项都 manual 到同一个频道）
+        // 所以我们强制降级为 'new' 或者提示用户
+        if (action === 'manual') {
+            return this.showToast('手动纠错模式不支持批量应用，请逐个确认', 'warning');
+        }
         
         this.applyConflictLogic(action, this.conflictModal.existingIndex, this.conflictModal.currentItem, this.conflictModal.selectedPrimary, this.conflictModal.mergedUrls);
         this.conflictModal.queue.shift();

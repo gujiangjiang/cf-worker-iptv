@@ -26,8 +26,6 @@ export const dataContent = `
     },
 
     catchupMode: 'custom', 
-    
-    // 新增：控制订阅密码输入框的显隐
     showSubPass: false,
 
     toast: { show: false, message: '', type: 'success' },
@@ -40,7 +38,6 @@ export const dataContent = `
     groupSortableInstance: null,
     epgSortableInstance: null,
 
-    // 播放器状态
     hlsInstance: null, 
     playingUrl: '',    
     playingName: '',   
@@ -102,6 +99,7 @@ export const dataContent = `
         matchType: 'exact', 
         suggestedName: '', 
         action: 'merge', 
+        manualTargetIndex: -1, // 新增：手动选择的目标索引
         mergedUrls: [], 
         selectedPrimary: '' 
     }

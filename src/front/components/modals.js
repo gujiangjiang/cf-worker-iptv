@@ -14,7 +14,7 @@ export const modalTemplate = `
                 <button type="button" class="btn-close" @click="cancelConflict" aria-label="Close"></button>
             </div>
             
-            <div class="conflict-body">
+            <div class="conflict-body" style="max-height: 70vh; overflow-y: auto;">
                 <div v-if="conflictModal.matchType === 'fuzzy'" class="alert alert-warning py-2 mb-3 small">
                     <strong>名称相似检测：</strong><br>
                     导入频道：<span class="fw-bold text-primary">{{ conflictModal.currentItem.name }}</span><br>
@@ -32,14 +32,29 @@ export const modalTemplate = `
                     <input class="form-check-input" type="radio" value="old" v-model="conflictModal.action">
                     <label class="form-check-label">丢弃导入的频道 (仅保留现有)</label>
                 </div>
-                <div class="form-check mb-3">
+                <div class="form-check mb-2">
                     <input class="form-check-input" type="radio" value="merge" v-model="conflictModal.action">
                     <label class="form-check-label">
                         {{ conflictModal.matchType === 'fuzzy' ? '合并到现有频道 (视为同一频道)' : '合并保留 (推荐)' }}
                     </label>
                 </div>
+                
+                <div class="form-check mb-3">
+                    <input class="form-check-input" type="radio" value="manual" v-model="conflictModal.action">
+                    <label class="form-check-label fw-bold text-primary">手动选择合并目标 (纠错)</label>
+                </div>
 
-                <div v-if="conflictModal.action === 'merge'" class="source-list bg-light">
+                <div v-if="conflictModal.action === 'manual'" class="mb-3 ps-4 animate-fade-in">
+                    <label class="form-label small text-muted">请选择要归入的目标频道：</label>
+                    <select class="form-select" v-model="conflictModal.manualTargetIndex">
+                        <option :value="-1" disabled>-- 请选择 --</option>
+                        <option v-for="(ch, idx) in channels" :key="ch.id" :value="idx">
+                            {{ ch.name }} ({{ ch.group }})
+                        </option>
+                    </select>
+                </div>
+
+                <div v-if="conflictModal.action === 'merge'" class="source-list bg-light" style="max-height: 200px; overflow-y: auto;">
                     <div class="p-2 border-bottom small text-muted">合并后的源列表预览 (选择默认源):</div>
                     <div class="source-item" v-for="(url, idx) in conflictModal.mergedUrls" :key="idx" @click="conflictModal.selectedPrimary = url">
                         <input type="radio" :checked="conflictModal.selectedPrimary === url" name="primaryUrl" class="form-check-input me-2 flex-shrink-0">
@@ -49,7 +64,7 @@ export const modalTemplate = `
                 </div>
 
                 <div class="d-flex justify-content-end mt-4 gap-2">
-                    <button class="btn btn-outline-secondary" @click="resolveAllConflicts">对剩余项全部应用</button>
+                    <button class="btn btn-outline-secondary" @click="resolveAllConflicts" :disabled="conflictModal.action === 'manual'">对剩余项全部应用</button>
                     <button class="btn btn-primary px-4" @click="resolveConflict">确认</button>
                 </div>
             </div>
