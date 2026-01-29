@@ -146,8 +146,19 @@ export const modalTemplate = `
                     <button type="button" class="btn-close" @click="modals.systemSettings = false"></button>
                 </div>
                 <div class="modal-body">
-                    <h6 class="border-bottom pb-2 mb-3">👤 访客权限控制</h6>
+                    <h6 class="border-bottom pb-2 mb-3">🛡️ 安全与权限</h6>
                     
+                    <div class="mb-3">
+                        <label class="form-label">独立订阅密码 (Token)</label>
+                        <div class="input-group">
+                            <input type="text" class="form-control" v-model="settings.subPassword" placeholder="为空则默认使用管理员密码">
+                            <button class="btn btn-outline-secondary" type="button" @click="settings.subPassword = Math.random().toString(36).substring(2, 10)">🎲 生成</button>
+                        </div>
+                        <div class="form-text small text-muted">
+                            设置此密码后，订阅链接将使用该密码，不再暴露管理员密码。
+                        </div>
+                    </div>
+
                     <div class="form-check form-switch mb-3">
                         <input class="form-check-input" type="checkbox" id="allowViewList" v-model="settings.guestConfig.allowViewList">
                         <label class="form-check-label" for="allowViewList">
@@ -331,46 +342,6 @@ export const modalTemplate = `
                 </div>
                 <div class="modal-footer">
                     <button class="btn btn-primary" @click="saveChannel">保存</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div v-if="modals.groupManager" class="modal-overlay" @click.self="modals.groupManager = false">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">📁 分组管理</h5>
-                    <button type="button" class="btn-close" @click="modals.groupManager = false"></button>
-                </div>
-                <div class="modal-body">
-                    <div class="input-group mb-3">
-                        <input type="text" class="form-control" v-model="newGroupInput" placeholder="输入新分组名称" @keyup.enter="addGroup">
-                        <button class="btn btn-outline-primary" @click="addGroup">添加</button>
-                    </div>
-                    
-                    <div class="list-group mb-2 border-bottom pb-2">
-                        <div class="list-group-item d-flex align-items-center gap-2 bg-light border-0">
-                            <span class="text-secondary text-center" style="width: 1.2rem;">🔒</span>
-                            <span class="flex-grow-1 fw-bold">默认 (未分组)</span>
-                            <span class="badge bg-secondary rounded-pill">{{ getGroupCount('默认') }}</span>
-                            <button class="btn btn-sm btn-outline-info text-nowrap ms-2" @click="viewGroupChannels('默认')">👁️ 查看</button>
-                        </div>
-                    </div>
-
-                    <ul class="list-group" id="group-list-container" style="max-height: 400px; overflow-y: auto;">
-                        <li class="list-group-item d-flex align-items-center gap-2" v-for="(g, idx) in groups" :key="g">
-                            <span class="group-drag-handle">⠿</span>
-                            <span class="flex-grow-1 text-truncate">{{ g }}</span>
-                            <span class="badge bg-secondary rounded-pill">{{ getGroupCount(g) }}</span>
-                            <button class="btn btn-sm btn-outline-info text-nowrap ms-1" @click="viewGroupChannels(g)" title="查看频道">👁️</button>
-                            <button class="btn btn-sm btn-outline-success text-nowrap" @click="openGroupChannelAdder(g)" title="从默认分组批量添加频道">➕</button>
-                            <button class="btn btn-sm btn-outline-danger border-0" @click="openConfirmModal('deleteGroup', idx)">✖</button>
-                        </li>
-                    </ul>
-                    <div class="mt-3 text-end">
-                        <button class="btn btn-sm btn-link text-decoration-none" @click="syncGroupsFromChannels">从现有频道同步</button>
-                    </div>
                 </div>
             </div>
         </div>

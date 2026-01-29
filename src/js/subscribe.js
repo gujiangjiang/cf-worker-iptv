@@ -16,9 +16,16 @@ function checkSubAuth(settings, urlParams, env, format) {
         return true;
     }
 
-    // 2. 如果不允许，检查 URL 参数中的 pwd 是否匹配密码
+    // 2. 鉴权逻辑：检查 URL 参数中的 pwd
     const pwd = urlParams.get("pwd");
-    if (pwd && pwd === env.PASSWORD) {
+    if (!pwd) return false;
+
+    // A. 匹配管理员密码 (最高权限)
+    if (pwd === env.PASSWORD) return true;
+
+    // B. 匹配独立订阅密码 (新增逻辑)
+    // 只有当 settings 里设置了 subPassword 且不为空时才进行匹配
+    if (settings && settings.subPassword && pwd === settings.subPassword) {
         return true;
     }
 
@@ -40,7 +47,7 @@ export async function handleM3uExport(request, env) {
 
         // 权限检查
         if (!checkSubAuth(settings, url.searchParams, env, 'm3u')) {
-            return errorResponse("Access Denied: Guest subscription is disabled.", 403);
+            return errorResponse("Access Denied: Invalid Password or Guest subscription disabled.", 403);
         }
 
         if (!channels || !Array.isArray(channels)) return new Response("#EXTM3U", { headers: corsHeaders });
@@ -69,16 +76,14 @@ export async function handleM3uExport(request, env) {
         let m3uContent = "#EXTM3U";
         
         if (settings) {
-            // 处理 EPG：优先使用新的 epgs 数组，兼容旧的 epgUrl
+            // 处理 EPG
             let epgUrlStr = "";
             if (Array.isArray(settings.epgs) && settings.epgs.length > 0) {
-                // 过滤已启用的并拼接
                 epgUrlStr = settings.epgs
                     .filter(e => e.enabled && e.url)
                     .map(e => e.url)
                     .join(',');
             } else if (settings.epgUrl) {
-                // 旧版兼容
                 epgUrlStr = settings.epgUrl;
             }
 
@@ -104,14 +109,13 @@ export async function handleM3uExport(request, env) {
             }
 
             if (mode === 'multi') {
-                // --- 多源模式：输出所有启用的源，名称相同 ---
+                // --- 多源模式 ---
                 sources.forEach(s => {
                     m3uContent += `#EXTINF:-1 tvg-name="${tvgName}" tvg-logo="${logo}" group-title="${group}",${name}\n${s.url}\n`;
                 });
             } else {
-                // --- 标准模式：只输出一个主源 ---
+                // --- 标准模式 ---
                 let mainUrl = "";
-                // 优先找标记为主源的
                 const primary = sources.find(s => s.isPrimary);
                 if (primary) mainUrl = primary.url;
                 else if (sources.length > 0) mainUrl = sources[0].url;
@@ -147,7 +151,7 @@ export async function handleTxtExport(request, env) {
 
         // 权限检查
         if (!checkSubAuth(settings, url.searchParams, env, 'txt')) {
-             return errorResponse("Access Denied: Guest subscription is disabled.", 403);
+             return errorResponse("Access Denied: Invalid Password or Guest subscription disabled.", 403);
         }
 
         if (!data || !Array.isArray(data)) return new Response("", { headers: corsHeaders });
@@ -163,25 +167,21 @@ export async function handleTxtExport(request, env) {
         });
 
         // 2. 确定分组迭代顺序
-        // 如果有自定义分组配置，优先使用配置顺序
         let sortedGroupNames = [];
         if (groupsList && Array.isArray(groupsList)) {
             sortedGroupNames = [...groupsList];
         }
         
-        // 找出所有未在自定义列表中的分组（包括“默认”和新导入但未保存顺序的）
         const knownSet = new Set(sortedGroupNames);
         const otherGroups = Object.keys(groupsMap).filter(g => !knownSet.has(g));
         
-        // 将剩余分组追加到最后 (默认分组会在这里面)
         const defaultGroupIndex = otherGroups.indexOf('默认');
         if (defaultGroupIndex > -1) {
-            otherGroups.splice(defaultGroupIndex, 1); // 移除默认
+            otherGroups.splice(defaultGroupIndex, 1); 
         }
         
-        // 最终顺序: 自定义分组 -> 其他未知分组 -> 默认
         const finalOrder = [...sortedGroupNames, ...otherGroups];
-        if (groupsMap['默认']) finalOrder.push('默认'); // 只有当存在默认分组数据时才添加
+        if (groupsMap['默认']) finalOrder.push('默认'); 
 
         // 3. 按顺序生成内容
         finalOrder.forEach(groupName => {

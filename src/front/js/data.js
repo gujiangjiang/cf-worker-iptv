@@ -11,6 +11,8 @@ export const dataContent = `
         epgs: [], 
         catchup: '',
         catchupSource: '',
+        // 新增 subPassword 字段
+        subPassword: '', 
         guestConfig: {
             allowViewList: false, 
             allowSub: true,       
@@ -90,14 +92,13 @@ export const dataContent = `
     
     newGroupInput: '',
     
-    // 冲突处理状态更新
     conflictModal: {
         show: false,
         queue: [], 
-        currentItem: null, // 新导入的频道对象
-        existingIndex: -1, // 已存在频道的索引
-        matchType: 'exact', // 'exact' (完全匹配) | 'fuzzy' (模糊/疑似匹配)
-        suggestedName: '', // 疑似匹配时，推荐合并到的目标名称
+        currentItem: null, 
+        existingIndex: -1, 
+        matchType: 'exact', 
+        suggestedName: '', 
         action: 'merge', 
         mergedUrls: [], 
         selectedPrimary: '' 

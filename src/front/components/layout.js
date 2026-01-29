@@ -19,16 +19,22 @@ export const layoutTemplate = `
                 </button>
                 <ul class="dropdown-menu">
                     <li v-if="isAuth || (publicGuestConfig.allowSub && publicGuestConfig.allowFormats.includes('m3u'))">
-                        <a class="dropdown-item" :href="baseUrl + '/m3u' + (isAuth && !settings.guestConfig.allowSub ? '?pwd='+password : '')" target="_blank">📄 标准 M3U (单源)</a>
+                        <a class="dropdown-item" 
+                           :href="baseUrl + '/m3u' + ( (!publicGuestConfig.allowSub) ? '?pwd=' + (settings.subPassword || password) : '' )" 
+                           target="_blank">📄 标准 M3U (单源)</a>
                     </li>
                     <li v-if="isAuth || (publicGuestConfig.allowSub && publicGuestConfig.allowFormats.includes('m3u'))">
-                        <a class="dropdown-item" :href="baseUrl + '/m3u?mode=multi' + (isAuth && !settings.guestConfig.allowSub ? '&pwd='+password : '')" target="_blank">📑 多源 M3U (同名多源)</a>
+                        <a class="dropdown-item" 
+                           :href="baseUrl + '/m3u?mode=multi' + ( (!publicGuestConfig.allowSub) ? '&pwd=' + (settings.subPassword || password) : '' )" 
+                           target="_blank">📑 多源 M3U (同名多源)</a>
                     </li>
                     
                     <li v-if="isAuth || (publicGuestConfig.allowSub && publicGuestConfig.allowFormats.includes('m3u') && publicGuestConfig.allowFormats.includes('txt'))"><hr class="dropdown-divider"></li>
                     
                     <li v-if="isAuth || (publicGuestConfig.allowSub && publicGuestConfig.allowFormats.includes('txt'))">
-                        <a class="dropdown-item" :href="baseUrl + '/txt' + (isAuth && !settings.guestConfig.allowSub ? '?pwd='+password : '')" target="_blank">📝 TXT 格式</a>
+                        <a class="dropdown-item" 
+                           :href="baseUrl + '/txt' + ( (!publicGuestConfig.allowSub) ? '?pwd=' + (settings.subPassword || password) : '' )" 
+                           target="_blank">📝 TXT 格式</a>
                     </li>
                 </ul>
             </div>
