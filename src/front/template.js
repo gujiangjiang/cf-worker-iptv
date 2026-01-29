@@ -21,6 +21,54 @@ export const html = `
 </head>
 <body>
     <div id="app" class="container pb-5">
+        
+        <div v-if="conflictModal.show" class="modal-overlay">
+            <div class="conflict-card">
+                <div class="conflict-header">
+                    <span>⚠️ 发现重复频道: {{ conflictModal.currentItem.name }}</span>
+                    <span class="badge bg-danger">剩余: {{ conflictModal.queue.length }}</span>
+                </div>
+                <div class="conflict-body">
+                    <p class="mb-2 text-muted small">系统检测到频道名称相似，请选择处理方式：</p>
+                    
+                    <div class="form-check mb-2">
+                        <input class="form-check-input" type="radio" name="conflictAction" id="actionKeepOld" value="old" v-model="conflictModal.action">
+                        <label class="form-check-label" for="actionKeepOld">
+                            <strong>仅保留旧版</strong> (丢弃新导入的源)
+                        </label>
+                    </div>
+
+                    <div class="form-check mb-2">
+                        <input class="form-check-input" type="radio" name="conflictAction" id="actionKeepNew" value="new" v-model="conflictModal.action">
+                        <label class="form-check-label" for="actionKeepNew">
+                            <strong>仅保留新版</strong> (覆盖现有的源)
+                        </label>
+                    </div>
+
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" type="radio" name="conflictAction" id="actionMerge" value="merge" v-model="conflictModal.action">
+                        <label class="form-check-label" for="actionMerge">
+                            <strong>合并保留 (推荐)</strong> - 请在下方选择 M3U 使用的<b>主要源</b>：
+                        </label>
+                    </div>
+
+                    <div v-if="conflictModal.action === 'merge'" class="source-list">
+                        <div class="source-item" v-for="(url, idx) in conflictModal.mergedUrls" :key="idx" @click="conflictModal.selectedPrimary = url">
+                            <input type="radio" :checked="conflictModal.selectedPrimary === url" name="primaryUrl">
+                            <span class="text-truncate">{{ url }}</span>
+                            <span :class="['badge-src', isUrlFromOld(url) ? 'badge-old' : 'badge-new']">
+                                {{ isUrlFromOld(url) ? '现有' : '新导入' }}
+                            </span>
+                        </div>
+                    </div>
+
+                    <div class="d-flex justify-content-end mt-4">
+                        <button class="btn btn-primary" @click="resolveConflict">确认处理</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <div class="toast-container position-fixed top-0 start-50 translate-middle-x p-3" style="z-index: 1050">
             <div :class="['toast', 'align-items-center', 'text-white', 'border-0', toastClass, toast.show ? 'show' : '']" role="alert" aria-live="assertive" aria-atomic="true">
                 <div class="d-flex">
@@ -125,7 +173,7 @@ export const html = `
                                     <th style="width: 12%">EPG 名称</th>
                                     <th style="width: 15%">显示名称</th>
                                     <th style="width: 15%">Logo URL</th>
-                                    <th style="width: 35%">直播源 URL</th>
+                                    <th style="width: 35%">直播源 URL (主)</th>
                                     <th style="width: 6%" class="text-center">操作</th>
                                 </tr>
                             </thead>
@@ -138,7 +186,12 @@ export const html = `
                                     <td><input type="text" class="form-control form-control-sm" v-model="item.tvgName" placeholder="tvg-name"></td>
                                     <td><input type="text" class="form-control form-control-sm" v-model="item.name" placeholder="列表显示名"></td>
                                     <td><input type="text" class="form-control form-control-sm" v-model="item.logo" placeholder="http://..."></td>
-                                    <td><input type="text" class="form-control form-control-sm" v-model="item.url"></td>
+                                    <td>
+                                        <div class="input-group input-group-sm">
+                                            <input type="text" class="form-control" v-model="item.urls[0]" placeholder="http://...">
+                                            <span v-if="item.urls.length > 1" class="input-group-text bg-warning text-dark" :title="'共 '+item.urls.length+' 个源，导出TXT时会自动合并'">+{{item.urls.length-1}}</span>
+                                        </div>
+                                    </td>
                                     <td class="text-center">
                                         <button class="btn btn-sm btn-outline-danger border-0" @click="removeChannel(index)">✖</button>
                                     </td>

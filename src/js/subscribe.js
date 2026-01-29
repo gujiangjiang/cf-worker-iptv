@@ -26,16 +26,22 @@ export async function handleM3uExport(request, env) {
         m3uContent += "\n";
 
         channels.forEach(ch => {
-            // 确保没有 undefined 出现
-            const name = ch.name || "未知频道"; // 显示名称
-            // 如果 tvgName 不存在（旧数据），则回退使用 name，保证兼容性
+            const name = ch.name || "未知频道";
             const tvgName = ch.tvgName || name; 
             const logo = ch.logo || "";
             const group = ch.group || "默认";
-            const url = ch.url || "";
             
-            // 构造 EXTINF 行：tvg-name使用独立字段，尾部使用显示名称
-            m3uContent += `#EXTINF:-1 tvg-name="${tvgName}" tvg-logo="${logo}" group-title="${group}",${name}\n${url}\n`;
+            // 数据结构兼容：优先取 urls 数组的第一个作为主源，如果没有则取旧版 url 字段
+            let mainUrl = "";
+            if (Array.isArray(ch.urls) && ch.urls.length > 0) {
+                mainUrl = ch.urls[0];
+            } else {
+                mainUrl = ch.url || "";
+            }
+            
+            if (mainUrl) {
+                m3uContent += `#EXTINF:-1 tvg-name="${tvgName}" tvg-logo="${logo}" group-title="${group}",${name}\n${mainUrl}\n`;
+            }
         });
 
         return new Response(m3uContent, {
@@ -70,8 +76,17 @@ export async function handleTxtExport(request, env) {
         for (const [groupName, channels] of Object.entries(groups)) {
             txtContent += `${groupName},#genre#\n`;
             channels.forEach(ch => {
-                // TXT 格式只显示“显示名称”
-                txtContent += `${ch.name},${ch.url}\n`;
+                // 多源处理：将 urls 数组用 # 连接
+                let urlStr = "";
+                if (Array.isArray(ch.urls) && ch.urls.length > 0) {
+                    urlStr = ch.urls.join('#');
+                } else {
+                    urlStr = ch.url || "";
+                }
+
+                if (urlStr) {
+                    txtContent += `${ch.name},${urlStr}\n`;
+                }
             });
         }
 
