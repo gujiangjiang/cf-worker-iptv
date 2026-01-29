@@ -134,10 +134,10 @@ export const html = `
                             <div class="col-md-6">
                                 <label class="form-label">回看模式</label>
                                 <select class="form-select" v-model="settings.catchup">
-                                    <option value="">None</option>
-                                    <option value="append">append</option>
-                                    <option value="default">default</option>
-                                    <option value="shift">shift</option>
+                                    <option value="">禁用</option>
+                                    <option value="append">追加</option>
+                                    <option value="default">默认</option>
+                                    <option value="shift">平移</option>
                                     <option value="flussonic">flussonic</option>
                                     <option value="fs">fs</option>
                                 </select>
