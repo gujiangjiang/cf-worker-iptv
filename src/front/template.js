@@ -39,6 +39,30 @@ export const html = `
         <div v-else>
             <div class="card p-3 mb-4 shadow-sm">
                 <div class="row g-3">
+                    <div class="col-12 d-flex justify-content-between align-items-center">
+                         <h5 class="mb-0">数据导入 & 设置</h5>
+                         <button class="btn btn-sm btn-outline-secondary" @click="showSettings = !showSettings">
+                            {{ showSettings ? '收起设置' : '⚙️ 全局设置' }}
+                         </button>
+                    </div>
+                    
+                    <div v-if="showSettings" class="col-12 border-bottom pb-3">
+                        <div class="row g-2">
+                            <div class="col-md-4">
+                                <label class="form-label small text-muted">EPG XML 地址 (x-tvg-url)</label>
+                                <input type="text" class="form-control form-control-sm" v-model="settings.epgUrl" placeholder="https://...">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label small text-muted">回看模式 (catchup)</label>
+                                <input type="text" class="form-control form-control-sm" v-model="settings.catchup" placeholder="例如: append">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label small text-muted">回看源规则 (catchup-source)</label>
+                                <input type="text" class="form-control form-control-sm" v-model="settings.catchupSource" placeholder="?playseek=\${(b)yyyy...}">
+                            </div>
+                        </div>
+                    </div>
+
                     <div class="col-md-5">
                         <label class="form-label">本地导入 (.m3u)</label>
                         <input type="file" class="form-control" @change="handleFileUpload" accept=".m3u,.m3u8">
@@ -52,7 +76,7 @@ export const html = `
                     </div>
                     <div class="col-12 d-flex justify-content-end border-top pt-3 mt-3">
                          <button class="btn btn-danger me-2" @click="clearAll">清空列表</button>
-                         <button class="btn btn-success" @click="saveData">💾 保存更改到云端</button>
+                         <button class="btn btn-success" @click="saveData">💾 保存所有更改 (列表+配置)</button>
                     </div>
                 </div>
             </div>
@@ -105,6 +129,12 @@ export const html = `
                     isAuth: false,
                     password: '',
                     channels: [],
+                    settings: {
+                        epgUrl: '',
+                        catchup: '',
+                        catchupSource: ''
+                    },
+                    showSettings: false,
                     loading: false,
                     importUrl: '',
                     baseUrl: window.location.origin
@@ -121,14 +151,21 @@ export const html = `
                 async login() {
                     this.loading = true;
                     try {
-                        const res = await fetch('/api/list', {
-                            headers: { 'Authorization': this.password }
-                        });
-                        if(res.status === 401) {
+                        // 并行获取频道列表和配置
+                        const [listRes, settingsRes] = await Promise.all([
+                            fetch('/api/list', { headers: { 'Authorization': this.password } }),
+                            fetch('/api/settings', { headers: { 'Authorization': this.password } })
+                        ]);
+
+                        if(listRes.status === 401) {
                             alert('密码错误');
                             localStorage.removeItem('iptv_pwd');
                         } else {
-                            this.channels = await res.json();
+                            this.channels = await listRes.json();
+                            // 加载设置，如果没有则保持默认空值
+                            const remoteSettings = await settingsRes.json();
+                            this.settings = { ...this.settings, ...remoteSettings };
+                            
                             this.isAuth = true;
                             localStorage.setItem('iptv_pwd', this.password);
                         }
@@ -175,6 +212,25 @@ export const html = `
                 parseM3U(content) {
                     if (!content) return;
                     const lines = content.split('\\n');
+                    
+                    // 1. 解析头部全局信息 (#EXTM3U)
+                    const headerLine = lines.find(l => l.startsWith('#EXTM3U'));
+                    let settingsFound = false;
+                    if(headerLine) {
+                        const epgMatch = headerLine.match(/x-tvg-url="([^"]*)"/);
+                        const catchupMatch = headerLine.match(/catchup="([^"]*)"/);
+                        const sourceMatch = headerLine.match(/catchup-source="([^"]*)"/);
+                        
+                        if(epgMatch || catchupMatch || sourceMatch) {
+                            if(epgMatch) this.settings.epgUrl = epgMatch[1];
+                            if(catchupMatch) this.settings.catchup = catchupMatch[1];
+                            if(sourceMatch) this.settings.catchupSource = sourceMatch[1];
+                            settingsFound = true;
+                            this.showSettings = true; // 自动展开设置面板
+                        }
+                    }
+
+                    // 2. 解析频道列表
                     const newChannels = [];
                     let currentInfo = {};
                     
@@ -207,7 +263,11 @@ export const html = `
                         return;
                     }
 
-                    if(confirm(\`解析到 \${newChannels.length} 个频道。\\n选择"确定"追加到现有列表，选择"取消"覆盖现有列表。\`) ) {
+                    let msg = \`解析到 \${newChannels.length} 个频道。\`;
+                    if(settingsFound) msg += '\\n已自动提取并更新了全局设置 (EPG/回看)。';
+                    msg += '\\n选择"确定"追加到现有列表，选择"取消"覆盖现有列表。';
+
+                    if(confirm(msg)) {
                          this.channels = [...this.channels, ...newChannels];
                     } else {
                          this.channels = newChannels;
@@ -234,15 +294,21 @@ export const html = `
                 async saveData() {
                     this.loading = true;
                     try {
-                        const res = await fetch('/api/save', {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                                'Authorization': this.password
-                            },
-                            body: JSON.stringify(this.channels)
-                        });
-                        if(res.ok) alert('保存成功！');
+                        // 并行保存频道列表和配置
+                        const [resList, resSettings] = await Promise.all([
+                            fetch('/api/save', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json', 'Authorization': this.password },
+                                body: JSON.stringify(this.channels)
+                            }),
+                            fetch('/api/settings', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json', 'Authorization': this.password },
+                                body: JSON.stringify(this.settings)
+                            })
+                        ]);
+
+                        if(resList.ok && resSettings.ok) alert('保存成功！');
                         else alert('保存失败');
                     } catch(e) {
                         alert('保存出错');

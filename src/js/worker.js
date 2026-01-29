@@ -37,6 +37,13 @@ export default {
             }
             break;
 
+        case "/api/settings":
+            // API: 获取/保存全局配置
+            if (request.method === "POST") {
+                return api.handleSaveSettings(request, env);
+            }
+            return api.handleGetSettings(request, env);
+
         case "/api/fetch-m3u":
             // API: 远程抓取 M3U (仅 POST)
             if (request.method === "POST") {

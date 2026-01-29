@@ -8,11 +8,25 @@ import { corsHeaders, errorResponse } from './utils.js';
 // 导出 M3U 格式
 export async function handleM3uExport(request, env) {
     try {
-        const data = await env.IPTV_KV.get("channels", { type: "json" });
-        if (!data || !Array.isArray(data)) return new Response("#EXTM3U", { headers: corsHeaders });
+        // 并行获取频道列表和全局配置
+        const [channels, settings] = await Promise.all([
+            env.IPTV_KV.get("channels", { type: "json" }),
+            env.IPTV_KV.get("settings", { type: "json" })
+        ]);
 
-        let m3uContent = "#EXTM3U\n";
-        data.forEach(ch => {
+        if (!channels || !Array.isArray(channels)) return new Response("#EXTM3U", { headers: corsHeaders });
+
+        let m3uContent = "#EXTM3U";
+        
+        // 拼接头部全局配置信息 (EPG, Catchup)
+        if (settings) {
+            if (settings.epgUrl) m3uContent += ` x-tvg-url="${settings.epgUrl}"`;
+            if (settings.catchup) m3uContent += ` catchup="${settings.catchup}"`;
+            if (settings.catchupSource) m3uContent += ` catchup-source="${settings.catchupSource}"`;
+        }
+        m3uContent += "\n";
+
+        channels.forEach(ch => {
             // 确保没有 undefined 出现
             const name = ch.name || "未知频道";
             const logo = ch.logo || "";
