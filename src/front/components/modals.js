@@ -368,6 +368,46 @@ export const modalTemplate = `
         </div>
     </div>
 
+    <div v-if="modals.groupManager" class="modal-overlay" @click.self="modals.groupManager = false">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">📁 分组管理</h5>
+                    <button type="button" class="btn-close" @click="modals.groupManager = false"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="input-group mb-3">
+                        <input type="text" class="form-control" v-model="newGroupInput" placeholder="输入新分组名称" @keyup.enter="addGroup">
+                        <button class="btn btn-outline-primary" @click="addGroup">添加</button>
+                    </div>
+                    
+                    <div class="list-group mb-2 border-bottom pb-2">
+                        <div class="list-group-item d-flex align-items-center gap-2 bg-light border-0">
+                            <span class="text-secondary text-center" style="width: 1.2rem;">🔒</span>
+                            <span class="flex-grow-1 fw-bold">默认 (未分组)</span>
+                            <span class="badge bg-secondary rounded-pill">{{ getGroupCount('默认') }}</span>
+                            <button class="btn btn-sm btn-outline-info text-nowrap ms-2" @click="viewGroupChannels('默认')">👁️ 查看</button>
+                        </div>
+                    </div>
+
+                    <ul class="list-group" id="group-list-container" style="max-height: 400px; overflow-y: auto;">
+                        <li class="list-group-item d-flex align-items-center gap-2" v-for="(g, idx) in groups" :key="g">
+                            <span class="group-drag-handle">⠿</span>
+                            <span class="flex-grow-1 text-truncate">{{ g }}</span>
+                            <span class="badge bg-secondary rounded-pill">{{ getGroupCount(g) }}</span>
+                            <button class="btn btn-sm btn-outline-info text-nowrap ms-1" @click="viewGroupChannels(g)" title="查看频道">👁️</button>
+                            <button class="btn btn-sm btn-outline-success text-nowrap" @click="openGroupChannelAdder(g)" title="从默认分组批量添加频道">➕</button>
+                            <button class="btn btn-sm btn-outline-danger border-0" @click="openConfirmModal('deleteGroup', idx)">✖</button>
+                        </li>
+                    </ul>
+                    <div class="mt-3 text-end">
+                        <button class="btn btn-sm btn-link text-decoration-none" @click="syncGroupsFromChannels">从现有频道同步</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div v-if="modals.settings" class="modal-overlay" @click.self="modals.settings = false">
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
