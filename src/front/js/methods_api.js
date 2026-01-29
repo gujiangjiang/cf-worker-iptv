@@ -100,25 +100,12 @@ export const apiMethods = `
         this.loading = false;
     },
 
-    // 触发清空确认
-    triggerClearAll() {
-        this.confirmModal = {
-            show: true,
-            title: '⚠️ 危险操作警告',
-            message: '此操作将清空所有频道且无法恢复！请输入管理密码确认：',
-            type: 'danger',
-            actionType: 'clearAll',
-            inputPassword: '',
-            requirePassword: true
-        };
-    },
-
-    // 旧的 removeChannel 代理方法 (保留兼容性，虽然已在模板中替换调用)
+    // 兼容旧接口：移除频道 (调用统一 UI 弹窗)
     removeChannel(index) {
-        this.triggerDeleteChannel(index);
+        this.openConfirmModal('deleteChannel', index);
     },
-    // 旧的 clearAll 代理方法
+    // 兼容旧接口：清空列表 (调用统一 UI 弹窗)
     clearAll() {
-        this.triggerClearAll();
+        this.openConfirmModal('clearAll');
     }
 `;

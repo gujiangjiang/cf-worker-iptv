@@ -130,7 +130,7 @@ export const html = `
                                     <div class="form-check" title="设为 M3U 主源">
                                         <input class="form-check-input" type="radio" :checked="source.isPrimary" @click="setPrimarySource(idx)" :disabled="!source.enabled">
                                     </div>
-                                    <button class="btn btn-sm btn-outline-danger border-0" @click="triggerDeleteSource(idx)">✖</button>
+                                    <button class="btn btn-sm btn-outline-danger border-0" @click="openConfirmModal('deleteSource', idx)">✖</button>
                                 </div>
                             </div>
                             <div v-if="channelForm.sources.length === 0" class="text-center text-muted py-3 border rounded border-dashed">
@@ -162,7 +162,7 @@ export const html = `
                                 <span class="group-drag-handle">⠿</span>
                                 <span class="flex-grow-1 text-truncate">{{ g }}</span>
                                 <button class="btn btn-sm btn-outline-success text-nowrap" @click="openGroupChannelAdder(g)" title="从默认分组批量添加频道">➕ 频道</button>
-                                <button class="btn btn-sm btn-outline-danger border-0" @click="triggerDeleteGroup(idx)">✖</button>
+                                <button class="btn btn-sm btn-outline-danger border-0" @click="openConfirmModal('deleteGroup', idx)">✖</button>
                             </li>
                         </ul>
                         <div class="mt-3 text-end">
@@ -289,7 +289,7 @@ export const html = `
                     <div class="col-md-5"><input type="file" class="form-control" @change="handleFileUpload" accept=".m3u,.m3u8"></div>
                     <div class="col-md-7"><div class="input-group"><input type="text" class="form-control" v-model="importUrl" placeholder="输入 M3U 链接..."><button class="btn btn-primary" @click="handleUrlImport">导入</button></div></div>
                     <div class="col-12 d-flex justify-content-end border-top pt-3 mt-3">
-                         <button class="btn btn-danger me-2" @click="triggerClearAll">清空</button>
+                         <button class="btn btn-danger me-2" @click="openConfirmModal('clearAll')">清空</button>
                          <button class="btn btn-success" @click="saveData">💾 保存云端</button>
                     </div>
                 </div>
@@ -332,7 +332,7 @@ export const html = `
                                     </td>
                                     <td class="text-center">
                                         <button class="btn btn-sm btn-outline-primary me-2" @click="openEditChannelModal(index)">编辑</button>
-                                        <button class="btn btn-sm btn-outline-danger" @click="triggerDeleteChannel(index)">删除</button>
+                                        <button class="btn btn-sm btn-outline-danger" @click="openConfirmModal('deleteChannel', index)">删除</button>
                                     </td>
                                 </tr>
                             </tbody>

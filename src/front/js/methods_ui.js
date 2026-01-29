@@ -44,7 +44,7 @@ export const uiMethods = `
         });
     },
 
-    // 新增：分组管理模态框排序
+    // 分组管理模态框排序
     initGroupSortable() {
         const el = document.getElementById('group-list-container');
         if (!el) return;
@@ -61,7 +61,7 @@ export const uiMethods = `
         });
     },
 
-    // 打开分组管理 (需要初始化排序)
+    // 打开分组管理
     openGroupManager() {
         this.modals.groupManager = true;
         this.$nextTick(() => this.initGroupSortable());
@@ -189,54 +189,53 @@ export const uiMethods = `
         }
     },
     
-    // 触发删除源确认
-    triggerDeleteSource(idx) {
-        this.confirmModal = {
-            show: true,
-            title: '确认删除',
-            message: '确定要删除这个直播源吗？',
-            type: 'danger',
-            actionType: 'deleteSource',
-            targetIndex: idx,
-            requirePassword: false
-        };
-    },
+    // 统一的确认弹窗触发器 (核心修改)
+    openConfirmModal(actionType, index = -1) {
+        // 重置状态
+        this.confirmModal.actionType = actionType;
+        this.confirmModal.targetIndex = index;
+        this.confirmModal.inputPassword = '';
+        this.confirmModal.requirePassword = false;
+        this.confirmModal.type = 'danger'; // 默认为红色危险弹窗
+        this.confirmModal.show = true;
 
-    // 触发删除频道确认
-    triggerDeleteChannel(idx) {
-        this.confirmModal = {
-            show: true,
-            title: '确认删除',
-            message: \`确定要删除频道 "\${this.channels[idx].name}" 吗？\`,
-            type: 'danger',
-            actionType: 'deleteChannel',
-            targetIndex: idx,
-            requirePassword: false
-        };
-    },
+        // 根据类型配置文案
+        switch(actionType) {
+            case 'deleteSource':
+                this.confirmModal.title = '确认删除源';
+                this.confirmModal.message = '确定要删除这个直播源吗？';
+                break;
+            
+            case 'deleteChannel':
+                const chName = this.channels[index]?.name || '未知';
+                this.confirmModal.title = '确认删除频道';
+                this.confirmModal.message = \`确定要删除频道 "\${chName}" 吗？\`;
+                break;
+            
+            case 'deleteGroup':
+                const groupName = this.groups[index];
+                const count = this.channels.filter(c => c.group === groupName).length;
+                this.confirmModal.title = '删除分组确认';
+                let msg = \`确定要删除分组 "\${groupName}" 吗？\`;
+                if (count > 0) {
+                    msg += \`\\n\\n该分组下包含 \${count} 个频道，删除分组后，这些频道将自动归入“默认”分组。\`;
+                }
+                this.confirmModal.message = msg;
+                break;
 
-    // 新增：删除分组确认
-    triggerDeleteGroup(idx) {
-        const groupName = this.groups[idx];
-        const inUseCount = this.channels.filter(ch => ch.group === groupName).length;
-        
-        let msg = \`确定要删除分组 "\${groupName}" 吗？\`;
-        if (inUseCount > 0) {
-            msg += \`\n\n该分组下包含 \${inUseCount} 个频道，删除分组后，这些频道将自动归入“默认”分组。\`;
+            case 'clearAll':
+                this.confirmModal.title = '⚠️ 危险操作警告';
+                this.confirmModal.message = '此操作将清空所有频道且无法恢复！请输入管理密码确认：';
+                this.confirmModal.requirePassword = true;
+                break;
+                
+            default:
+                this.confirmModal.show = false;
+                break;
         }
-
-        this.confirmModal = {
-            show: true,
-            title: '删除分组确认',
-            message: msg,
-            type: 'danger',
-            actionType: 'deleteGroup',
-            targetIndex: idx,
-            requirePassword: false
-        };
     },
 
-    // 执行确认操作
+    // 执行确认操作 (逻辑保持统一)
     executeConfirm() {
         const { actionType, targetIndex, inputPassword } = this.confirmModal;
 
@@ -293,9 +292,9 @@ export const uiMethods = `
         this.groups.push(val);
         this.newGroupInput = '';
     },
-    // removeGroup 已被 triggerDeleteGroup 替代
+    // 删除分组入口统一使用 openConfirmModal
     removeGroup(index) {
-        this.triggerDeleteGroup(index);
+        this.openConfirmModal('deleteGroup', index);
     },
     syncGroupsFromChannels() {
         const extracted = new Set(this.channels.map(c => c.group || '默认'));
