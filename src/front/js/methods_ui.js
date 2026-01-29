@@ -128,7 +128,7 @@ export const uiMethods = `
         this.editMode = false;
         this.editingIndex = -1;
         this.channelForm = {
-            group: this.groups.length > 0 ? this.groups[0] : '默认',
+            group: '默认', // 修改：新增频道时，默认分组设为"默认"，不再选择第一个自定义分组
             name: '', tvgName: '',
             useLogo: false, logo: '',
             sources: [] 
@@ -145,6 +145,10 @@ export const uiMethods = `
         const ch = this.channels[index];
         // 深拷贝防止直接修改
         this.channelForm = JSON.parse(JSON.stringify(ch));
+        // 修改：编辑时，如果该频道分组为空，也强制设为默认
+        if (!this.channelForm.group) {
+            this.channelForm.group = '默认';
+        }
         this.logoPreviewUrl = this.channelForm.logo;
         this.modals.channelEditor = true;
         this.$nextTick(() => this.initSourceSortable());
