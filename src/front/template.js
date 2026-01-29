@@ -69,18 +69,14 @@ export const html = `
                             <div class="list-group" id="source-list-container">
                                 <div v-for="(source, idx) in channelForm.sources" :key="idx" class="list-group-item source-row d-flex align-items-center gap-2">
                                     <span class="source-drag-handle text-secondary fs-5">⠿</span>
-                                    
                                     <div class="form-check" title="是否启用该源">
                                         <input class="form-check-input" type="checkbox" v-model="source.enabled" @change="onSourceEnableChange(idx)">
                                     </div>
-
                                     <input type="text" class="form-control form-control-sm" v-model="source.url" :disabled="!source.enabled" placeholder="http://...">
-
                                     <div class="form-check" title="设为 M3U 主源">
                                         <input class="form-check-input" type="radio" :checked="source.isPrimary" @click="setPrimarySource(idx)" :disabled="!source.enabled">
                                         <label class="form-check-label small text-muted" v-if="source.isPrimary">主源</label>
                                     </div>
-
                                     <button class="btn btn-sm btn-outline-danger border-0" @click="removeSource(idx)">✖</button>
                                 </div>
                             </div>
@@ -132,7 +128,7 @@ export const html = `
                     <div class="modal-body">
                         <div class="mb-3">
                             <label class="form-label">EPG XML 地址</label>
-                            <input type="text" class="form-control" v-model="settings.epgUrl">
+                            <input type="text" class="form-control" v-model="settings.epgUrl" placeholder="例如: https://e.xml">
                         </div>
                         <div class="row g-3">
                             <div class="col-md-6">
@@ -147,8 +143,25 @@ export const html = `
                                 </select>
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label">回看规则</label>
-                                <input type="text" class="form-control" v-model="settings.catchupSource">
+                                <label class="form-label">回看源规则</label>
+                                <select class="form-select mb-2" v-model="catchupMode" @change="onCatchupModeChange">
+                                    <option value="append">通用追加格式 (年月日时分秒)</option>
+                                    <option value="timestamp">通用时间戳格式</option>
+                                    <option value="custom">自定义...</option>
+                                </select>
+                                
+                                <input v-if="catchupMode === 'custom'" type="text" class="form-control" v-model="settings.catchupSource" placeholder="输入自定义规则...">
+                            </div>
+                        </div>
+                        
+                        <div class="mt-4">
+                            <label class="form-label small text-muted">当前配置预览 (M3U 头部标签)</label>
+                            <div class="p-3 bg-light border rounded font-monospace small text-break">
+                                <span v-if="settings.catchup || settings.catchupSource">
+                                    <span v-if="settings.catchup">catchup="{{settings.catchup}}"</span>
+                                    <span v-if="settings.catchupSource" class="ms-2">catchup-source="{{settings.catchupSource}}"</span>
+                                </span>
+                                <span v-else class="text-muted fst-italic">暂未配置回看参数</span>
                             </div>
                         </div>
                     </div>
@@ -210,7 +223,7 @@ export const html = `
                          <h5 class="mb-0">快捷操作</h5>
                          <div>
                              <button class="btn btn-sm btn-outline-secondary me-2" @click="modals.groupManager = true">📁 分组管理</button>
-                             <button class="btn btn-sm btn-outline-secondary" @click="modals.settings = true">⚙️ 全局设置</button>
+                             <button class="btn btn-sm btn-outline-secondary" @click="openSettingsModal">⚙️ 全局设置</button>
                          </div>
                     </div>
                     <div class="col-md-5"><input type="file" class="form-control" @change="handleFileUpload" accept=".m3u,.m3u8"></div>

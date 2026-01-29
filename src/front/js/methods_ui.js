@@ -44,9 +44,31 @@ export const uiMethods = `
         });
     },
 
-    // --- 频道编辑/新增 ---
+    // --- 全局设置 ---
+    openSettingsModal() {
+        // 打开时判断当前规则是否匹配预设
+        const source = this.settings.catchupSource;
+        if (source === '?playseek=\${(b)yyyyMMddHHmmss}-\${(e)yyyyMMddHHmmss}') {
+            this.catchupMode = 'append';
+        } else if (source === '?playseek=\${(b)timestamp}-\${(e)timestamp}') {
+            this.catchupMode = 'timestamp';
+        } else {
+            this.catchupMode = 'custom';
+        }
+        this.modals.settings = true;
+    },
 
-    // 打开新增模式
+    onCatchupModeChange() {
+        // 切换模式时自动填充
+        if (this.catchupMode === 'append') {
+            this.settings.catchupSource = '?playseek=\${(b)yyyyMMddHHmmss}-\${(e)yyyyMMddHHmmss}';
+        } else if (this.catchupMode === 'timestamp') {
+            this.settings.catchupSource = '?playseek=\${(b)timestamp}-\${(e)timestamp}';
+        }
+        // 如果是 custom，保留当前值供用户编辑，或者置空也可以，这里选择保留体验更好
+    },
+
+    // --- 频道编辑/新增 ---
     openAddChannelModal() {
         this.editMode = false;
         this.editingIndex = -1;

@@ -11,6 +11,8 @@ export const dataContent = `
         catchup: '',
         catchupSource: ''
     },
+    catchupMode: 'custom', // 新增：回看规则模式 (append, timestamp, custom)
+
     toast: { show: false, message: '', type: 'success' },
     toastTimer: null,
     loading: false,
