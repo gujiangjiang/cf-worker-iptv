@@ -67,8 +67,8 @@ export const html = `
                                 <label class="form-label small text-muted">回看源规则 (catchup-source)</label>
                                 <input type="text" class="form-control form-control-sm" v-model="settings.catchupSource" list="catchupSourceOptions" placeholder="选择或输入规则...">
                                 <datalist id="catchupSourceOptions">
-                                    <option value="?playseek=${(b)yyyyMMddHHmmss}-${(e)yyyyMMddHHmmss}">通用追加格式 (年月日时分秒)</option>
-                                    <option value="?playseek=${(b)timestamp}-${(e)timestamp}">通用时间戳格式</option>
+                                    <option value="?playseek=\${(b)yyyyMMddHHmmss}-\${(e)yyyyMMddHHmmss}">通用追加格式 (年月日时分秒)</option>
+                                    <option value="?playseek=\${(b)timestamp}-\${(e)timestamp}">通用时间戳格式</option>
                                 </datalist>
                             </div>
                         </div>
@@ -162,7 +162,6 @@ export const html = `
                 async login() {
                     this.loading = true;
                     try {
-                        // 并行获取频道列表和配置
                         const [listRes, settingsRes] = await Promise.all([
                             fetch('/api/list', { headers: { 'Authorization': this.password } }),
                             fetch('/api/settings', { headers: { 'Authorization': this.password } })
@@ -173,10 +172,8 @@ export const html = `
                             localStorage.removeItem('iptv_pwd');
                         } else {
                             this.channels = await listRes.json();
-                            // 加载设置，如果没有则保持默认空值
                             const remoteSettings = await settingsRes.json();
                             this.settings = { ...this.settings, ...remoteSettings };
-                            
                             this.isAuth = true;
                             localStorage.setItem('iptv_pwd', this.password);
                         }
@@ -237,27 +234,47 @@ export const html = `
                             if(catchupMatch) this.settings.catchup = catchupMatch[1];
                             if(sourceMatch) this.settings.catchupSource = sourceMatch[1];
                             settingsFound = true;
-                            this.showSettings = true; // 自动展开设置面板
+                            this.showSettings = true;
                         }
                     }
 
-                    // 2. 解析频道列表
+                    // 2. 解析频道列表 (优化版逻辑)
                     const newChannels = [];
                     let currentInfo = {};
                     
                     lines.forEach(line => {
                         line = line.trim();
-                        if (line.startsWith('#EXTINF:')) {
-                            const infoMatch = line.match(/group-title="(.*?)".*tvg-logo="(.*?)",(.*)/) || 
-                                              line.match(/,(.*)/);
+                        if (line.includes('EXTINF:')) { // 兼容 #EXTINF: 和 EXTINF:
+                            // 逻辑：尝试找到"属性区"和"频道名"的分界点
+                            // 通常是最后一个逗号，且该逗号不在引号内
+                            // 简单起见，我们假设属性中的值都包裹在双引号中，所以最后一个逗号通常是分界线
                             
-                            if (infoMatch) {
-                                currentInfo = {
-                                    group: infoMatch[1] || '未分组',
-                                    logo: infoMatch[2] || '',
-                                    name: (infoMatch[3] || infoMatch[1] || '未知频道').trim()
-                                };
+                            let metaPart = line;
+                            let namePart = '';
+                            
+                            const lastComma = line.lastIndexOf(',');
+                            const lastQuote = line.lastIndexOf('"');
+                            
+                            // 如果最后一个逗号在最后一个引号之后，说明它是分隔符
+                            if (lastComma > lastQuote && lastComma > -1) {
+                                metaPart = line.substring(0, lastComma);
+                                namePart = line.substring(lastComma + 1).trim();
                             }
+                            
+                            // 提取属性的辅助函数
+                            const getAttr = (key) => {
+                                const regex = new RegExp(\`\${key}="([^"]*)"\`);
+                                const match = metaPart.match(regex);
+                                return match ? match[1] : '';
+                            };
+                            
+                            currentInfo = {
+                                group: getAttr('group-title') || '未分组',
+                                logo: getAttr('tvg-logo') || '',
+                                // 优先使用逗号后的名称，如果没有则尝试 tvg-name，最后 fallback 到 '未知频道'
+                                name: namePart || getAttr('tvg-name') || '未知频道'
+                            };
+                            
                         } else if (line && !line.startsWith('#')) {
                             if (currentInfo.name) {
                                 newChannels.push({
@@ -305,7 +322,6 @@ export const html = `
                 async saveData() {
                     this.loading = true;
                     try {
-                        // 并行保存频道列表和配置
                         const [resList, resSettings] = await Promise.all([
                             fetch('/api/save', {
                                 method: 'POST',
