@@ -29,7 +29,7 @@ export const html = `
                         <button type="button" class="btn-close" @click="confirmModal.show = false"></button>
                     </div>
                     <div class="modal-body">
-                        <p class="mb-3">{{ confirmModal.message }}</p>
+                        <p class="mb-3" style="white-space: pre-wrap;">{{ confirmModal.message }}</p>
                         
                         <div v-if="confirmModal.requirePassword">
                             <label class="form-label small text-muted">请输入管理密码以确认：</label>
@@ -39,6 +39,34 @@ export const html = `
                     <div class="modal-footer">
                         <button class="btn btn-secondary" @click="confirmModal.show = false">取消</button>
                         <button :class="['btn', confirmModal.type === 'danger' ? 'btn-danger' : 'btn-primary']" @click="executeConfirm">确认</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div v-if="modals.groupChannelAdder" class="modal-overlay" style="z-index: 1080;" @click.self="modals.groupChannelAdder = false">
+            <div class="modal-dialog modal-dialog-scrollable">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">添加频道到 "{{ groupAdderData.targetGroup }}"</h5>
+                        <button type="button" class="btn-close" @click="modals.groupChannelAdder = false"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p class="text-muted small">以下是所有“默认”分组的频道，请选择要移动的频道：</p>
+                        <div v-if="groupAdderData.candidates.length === 0" class="text-center py-4 text-muted border rounded border-dashed">
+                            暂无“默认”分组的频道
+                        </div>
+                        <div v-else class="list-group">
+                            <label v-for="ch in groupAdderData.candidates" :key="ch.idx" class="list-group-item d-flex gap-2 align-items-center" style="cursor: pointer;">
+                                <input class="form-check-input flex-shrink-0" type="checkbox" :checked="groupAdderData.selectedIndices.includes(ch.idx)" @change="toggleCandidate(ch.idx)">
+                                <span class="text-truncate">{{ ch.name }}</span>
+                            </label>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <span class="me-auto small text-muted">已选: {{ groupAdderData.selectedIndices.length }}</span>
+                        <button class="btn btn-secondary" @click="modals.groupChannelAdder = false">取消</button>
+                        <button class="btn btn-primary" @click="saveGroupChannels" :disabled="groupAdderData.selectedIndices.length === 0">确认添加</button>
                     </div>
                 </div>
             </div>
@@ -129,10 +157,12 @@ export const html = `
                             <input type="text" class="form-control" v-model="newGroupInput" placeholder="输入新分组名称" @keyup.enter="addGroup">
                             <button class="btn btn-outline-primary" @click="addGroup">添加</button>
                         </div>
-                        <ul class="list-group" style="max-height: 400px; overflow-y: auto;">
-                            <li class="list-group-item d-flex justify-content-between align-items-center" v-for="(g, idx) in groups" :key="idx">
-                                {{ g }}
-                                <button class="btn btn-sm btn-outline-danger border-0" @click="removeGroup(idx)">✖</button>
+                        <ul class="list-group" id="group-list-container" style="max-height: 400px; overflow-y: auto;">
+                            <li class="list-group-item d-flex align-items-center gap-2" v-for="(g, idx) in groups" :key="g">
+                                <span class="group-drag-handle">⠿</span>
+                                <span class="flex-grow-1 text-truncate">{{ g }}</span>
+                                <button class="btn btn-sm btn-outline-success text-nowrap" @click="openGroupChannelAdder(g)" title="从默认分组批量添加频道">➕ 频道</button>
+                                <button class="btn btn-sm btn-outline-danger border-0" @click="triggerDeleteGroup(idx)">✖</button>
                             </li>
                         </ul>
                         <div class="mt-3 text-end">
@@ -252,7 +282,7 @@ export const html = `
                     <div class="col-12 d-flex justify-content-between align-items-center">
                          <h5 class="mb-0">快捷操作</h5>
                          <div>
-                             <button class="btn btn-sm btn-outline-secondary me-2" @click="modals.groupManager = true">📁 分组管理</button>
+                             <button class="btn btn-sm btn-outline-secondary me-2" @click="openGroupManager">📁 分组管理</button>
                              <button class="btn btn-sm btn-outline-secondary" @click="openSettingsModal">⚙️ 全局设置</button>
                          </div>
                     </div>

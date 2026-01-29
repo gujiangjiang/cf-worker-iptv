@@ -20,11 +20,20 @@ export const dataContent = `
     baseUrl: window.location.origin,
     sortableInstance: null,
     sourceSortableInstance: null, // 新增：模态框内源列表的排序实例
+    groupSortableInstance: null, // 新增：分组排序实例
 
     modals: {
         settings: false,
         channelEditor: false, // 统一使用 channelEditor 模态框
         groupManager: false
+        groupChannelAdder: false // 新增：批量添加频道模态框
+    },
+
+    // 新增：批量添加频道数据状态
+    groupAdderData: {
+        targetGroup: '',
+        candidates: [], // { idx, name, ... }
+        selectedIndices: [] // [originalIndex1, originalIndex2...]
     },
 
     // 通用确认模态框状态

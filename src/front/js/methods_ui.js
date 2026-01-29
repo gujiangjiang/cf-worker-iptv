@@ -44,6 +44,61 @@ export const uiMethods = `
         });
     },
 
+    // 新增：分组管理模态框排序
+    initGroupSortable() {
+        const el = document.getElementById('group-list-container');
+        if (!el) return;
+        if (this.groupSortableInstance) this.groupSortableInstance.destroy();
+        this.groupSortableInstance = Sortable.create(el, {
+            handle: '.group-drag-handle',
+            animation: 150,
+            ghostClass: 'sortable-ghost',
+            onEnd: (evt) => {
+                const item = this.groups[evt.oldIndex];
+                this.groups.splice(evt.oldIndex, 1);
+                this.groups.splice(evt.newIndex, 0, item);
+            }
+        });
+    },
+
+    // 打开分组管理 (需要初始化排序)
+    openGroupManager() {
+        this.modals.groupManager = true;
+        this.$nextTick(() => this.initGroupSortable());
+    },
+
+    // --- 批量添加频道到分组 ---
+    openGroupChannelAdder(groupName) {
+        this.groupAdderData.targetGroup = groupName;
+        // 筛选出所有属于“默认”分组的频道作为候选
+        this.groupAdderData.candidates = this.channels
+            .map((ch, idx) => ({ idx, name: ch.name, group: ch.group }))
+            .filter(ch => ch.group === '默认');
+        
+        this.groupAdderData.selectedIndices = [];
+        this.modals.groupChannelAdder = true;
+    },
+
+    toggleCandidate(originalIndex) {
+        const i = this.groupAdderData.selectedIndices.indexOf(originalIndex);
+        if (i > -1) this.groupAdderData.selectedIndices.splice(i, 1);
+        else this.groupAdderData.selectedIndices.push(originalIndex);
+    },
+
+    saveGroupChannels() {
+        const target = this.groupAdderData.targetGroup;
+        const count = this.groupAdderData.selectedIndices.length;
+        
+        if (count > 0) {
+            this.groupAdderData.selectedIndices.forEach(idx => {
+                if(this.channels[idx]) this.channels[idx].group = target;
+            });
+            this.showToast(\`成功将 \${count} 个频道移动到 "\${target}"\`);
+        }
+        
+        this.modals.groupChannelAdder = false;
+    },
+
     // --- 全局设置 ---
     openSettingsModal() {
         // 打开时判断当前规则是否匹配预设
@@ -160,6 +215,27 @@ export const uiMethods = `
         };
     },
 
+    // 新增：删除分组确认
+    triggerDeleteGroup(idx) {
+        const groupName = this.groups[idx];
+        const inUseCount = this.channels.filter(ch => ch.group === groupName).length;
+        
+        let msg = \`确定要删除分组 "\${groupName}" 吗？\`;
+        if (inUseCount > 0) {
+            msg += \`\n\n该分组下包含 \${inUseCount} 个频道，删除分组后，这些频道将自动归入“默认”分组。\`;
+        }
+
+        this.confirmModal = {
+            show: true,
+            title: '删除分组确认',
+            message: msg,
+            type: 'danger',
+            actionType: 'deleteGroup',
+            targetIndex: idx,
+            requirePassword: false
+        };
+    },
+
     // 执行确认操作
     executeConfirm() {
         const { actionType, targetIndex, inputPassword } = this.confirmModal;
@@ -175,7 +251,15 @@ export const uiMethods = `
         else if (actionType === 'deleteChannel') {
             this.channels.splice(targetIndex, 1);
             this.showToast('频道已删除');
-        } 
+        }
+        else if (actionType === 'deleteGroup') {
+            const groupName = this.groups[targetIndex];
+            // 归还频道到默认分组
+            this.channels.forEach(ch => { if(ch.group === groupName) ch.group = '默认'; });
+            // 删除分组
+            this.groups.splice(targetIndex, 1);
+            this.showToast('分组已删除');
+        }
         else if (actionType === 'clearAll') {
             // 验证密码
             if (inputPassword !== this.password) {
@@ -209,14 +293,9 @@ export const uiMethods = `
         this.groups.push(val);
         this.newGroupInput = '';
     },
+    // removeGroup 已被 triggerDeleteGroup 替代
     removeGroup(index) {
-        const groupName = this.groups[index];
-        const inUse = this.channels.some(ch => ch.group === groupName);
-        if(inUse) {
-            if(!confirm(\`分组 "\${groupName}" 正在被使用，删除后将重置为"默认"，确定？\`)) return;
-            this.channels.forEach(ch => { if(ch.group === groupName) ch.group = '默认'; });
-        }
-        this.groups.splice(index, 1);
+        this.triggerDeleteGroup(index);
     },
     syncGroupsFromChannels() {
         const extracted = new Set(this.channels.map(c => c.group || '默认'));

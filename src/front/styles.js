@@ -52,6 +52,10 @@ export const cssContent = `
     .source-row:hover { background-color: #f8f9fa; }
     .source-drag-handle { cursor: grab; color: #adb5bd; }
     .source-drag-handle:hover { color: #6c757d; }
+    
+    /* 分组列表样式 */
+    .group-drag-handle { cursor: grab; color: #adb5bd; font-size: 1.2rem; }
+    .group-drag-handle:hover { color: #6c757d; }
 
     /* 冲突卡片 */
     .conflict-card { background-color: #fff; width: 600px; max-width: 90%; border-radius: 12px; box-shadow: 0 15px 40px rgba(0,0,0,0.3); overflow: hidden; display: flex; flex-direction: column; }
