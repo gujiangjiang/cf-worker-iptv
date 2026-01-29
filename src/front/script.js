@@ -25,7 +25,8 @@ export const jsContent = `
             const savedPwd = localStorage.getItem('iptv_pwd');
             if(savedPwd) {
                 this.password = savedPwd;
-                this.login();
+                // 传入 true 表示静默自动登录
+                this.login(true);
             } else {
                 // 如果没有保存密码，则初始化访客模式 (拉取配置)
                 this.initGuest();

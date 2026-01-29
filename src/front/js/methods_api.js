@@ -39,7 +39,8 @@ export const apiMethods = `
     },
 
     // 登录并加载完整数据
-    async login() {
+    // 参数 isAutoLogin: 是否为页面加载时的自动登录 (true=不显示Toast, false=显示Toast)
+    async login(isAutoLogin = false) {
         if (!this.password) return this.showToast('请输入密码', 'warning');
 
         this.loading = true;
@@ -52,7 +53,7 @@ export const apiMethods = `
             ]);
 
             if(listRes.status === 401 || settingsRes.status === 401) {
-                this.showToast('密码错误', 'error');
+                if (!isAutoLogin) this.showToast('密码错误', 'error');
                 localStorage.removeItem('iptv_pwd');
             } else {
                 // 1. 处理频道列表
@@ -64,7 +65,7 @@ export const apiMethods = `
                 this.settings = { 
                     ...this.settings, 
                     ...remoteSettings,
-                    guestConfig: { // 确保 guestConfig 结构完整
+                    guestConfig: { 
                         allowViewList: false,
                         allowSub: true,
                         allowFormats: ['m3u', 'txt'],
@@ -85,16 +86,20 @@ export const apiMethods = `
                 this.modals.login = false; // 关闭登录弹窗
                 localStorage.setItem('iptv_pwd', this.password);
                 
-                // 登录后同步一次 publicGuestConfig，以便在界面上能即时反映管理员视角的配置
+                // 登录后同步一次 publicGuestConfig
                 this.publicGuestConfig = JSON.parse(JSON.stringify(this.settings.guestConfig));
 
                 this.sortChannelsByGroup();
                 this.$nextTick(() => { this.initSortable(); });
-                this.showToast('登录成功', 'success');
+                
+                // 只有非自动登录时才显示 Toast
+                if (!isAutoLogin) {
+                    this.showToast('登录成功', 'success');
+                }
             }
         } catch(e) {
             console.error(e);
-            this.showToast('连接服务器失败', 'error');
+            if (!isAutoLogin) this.showToast('连接服务器失败', 'error');
         }
         this.loading = false;
     },
@@ -105,7 +110,6 @@ export const apiMethods = `
         this.password = '';
         localStorage.removeItem('iptv_pwd');
         this.channels = []; // 清空数据
-        // 重置敏感配置
         this.settings.guestConfig = { allowViewList: false, allowSub: true, allowFormats: ['m3u', 'txt'] }; 
         this.showToast('已退出登录', 'info');
         
@@ -140,7 +144,7 @@ export const apiMethods = `
         this.loading = false;
     },
 
-    // 独立保存系统设置 (新增)
+    // 独立保存系统设置
     async saveSettingsOnly() {
         this.loading = true;
         try {
@@ -151,7 +155,6 @@ export const apiMethods = `
             });
             if(res.ok) {
                 this.showToast('系统设置已保存', 'success');
-                // 同步更新本地访客配置缓存，确保登出后或界面逻辑立即生效
                 this.publicGuestConfig = JSON.parse(JSON.stringify(this.settings.guestConfig));
             } else {
                 this.showToast('保存设置失败', 'error');
