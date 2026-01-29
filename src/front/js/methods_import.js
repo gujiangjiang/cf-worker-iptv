@@ -194,7 +194,7 @@ export const importMethods = `
         
         rawChannels.forEach(ch => {
             ch = this.standardizeChannel(ch); 
-            const key = this.normalizeName(ch.name); // 使用标准化名称作为 Key
+            const key = this.normalizeName(ch.name); 
             if (!key) { uniqueNewChannels.push(ch); return; }
             
             if (tempMap.has(key)) {
@@ -213,7 +213,7 @@ export const importMethods = `
         // 2. 构建现有频道映射表
         const existingMap = new Map(); 
         this.channels.forEach((ch, index) => {
-            const key = this.normalizeName(ch.name); // 使用同样的标准化逻辑
+            const key = this.normalizeName(ch.name); 
             if(key) existingMap.set(key, index);
         });
 
@@ -224,25 +224,22 @@ export const importMethods = `
             const newKey = this.normalizeName(newCh.name);
             const cleanNewKey = this.cleanChannelName(newCh.name);
 
-            // A. 完全匹配检测 (标准化名称一致即视为同一个频道)
-            // 例如: "CCTV-1" 和 "CCTV 1" -> 都会变成 "CCTV1"，进入此逻辑
+            // A. 完全匹配检测
             if (existingMap.has(newKey)) {
                 const existingIndex = existingMap.get(newKey);
                 const existingChannel = this.channels[existingIndex];
                 
                 // --- 核心逻辑：源包含检测 ---
-                // 获取现有频道的所有 URL 集合
                 const existingUrls = new Set(existingChannel.sources.map(s => s.url));
                 
                 // 检查：新导入的所有源，是否都已经存在于老频道中？
-                // 只要新导入的源中，有一个是新的(existingUrls里没有)，isSubset 就是 false
                 const isSubset = newCh.sources.every(s => existingUrls.has(s.url));
 
                 if (isSubset) {
-                    // 如果新源是老源的子集（完全包含），则视为无效更新，直接跳过
+                    // 只有完全是子集时才跳过，不打扰用户
                     skippedDuplicateCount++;
                 } else {
-                    // 存在差异（有新源），弹出冲突供用户决策
+                    // 有新源，弹出冲突供用户决策
                     conflicts.push({
                         newItem: newCh,
                         existingIndex: existingIndex,
@@ -293,7 +290,8 @@ export const importMethods = `
         } else {
             let msg = \`导入完成，新增 \${safeToAdd.length} 个频道\`;
             if (skippedDuplicateCount > 0) {
-                msg += \`，自动跳过 \${skippedDuplicateCount} 个无需更新的重复项\`;
+                // 修正：采用用户要求的明确提示文案
+                msg += \`，检测到 \${skippedDuplicateCount} 个完全一致或被包含的频道已自动忽略\`;
             }
             this.showToast(msg, 'success');
         }
