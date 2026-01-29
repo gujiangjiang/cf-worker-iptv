@@ -23,13 +23,19 @@ export const importMethods = `
         if (!name) return '';
         let s = name.toUpperCase();
         
-        // 增强正则：支持以 空格、横杠、下划线 开头的后缀，或者直接以这些结尾
-        // 去除 " 4K", "-4K", "_4K", " 8M", " 18M2160"
-        s = s.replace(/(?:[\\s-_]|^)\\d+M\\d*/g, ''); 
-        s = s.replace(/(?:[\\s-_]|^)\\d+K/g, '');     
-        s = s.replace(/(?:[\\s-_]|^)(F?HD|SD|HEVC|HDR)/g, ''); 
+        // 1. 精准去除 "码率+分辨率" 格式后缀 (如 " 18M2160", " 48M4320", " 8M1080")
+        // \\s+ 确保前面有空格，避免误伤正常名字里的数字
+        s = s.replace(/\\s+\\d+M\\d+/g, ''); 
         
-        // 去除括号内容 [xxx] (xxx)
+        // 2. 去除纯分辨率后缀 (如 " 1920*1080", " 1080P")
+        s = s.replace(/\\s+\\d{3,4}[\\*x]\\d{3,4}/g, '');
+        s = s.replace(/\\s+\\d{3,4}P/g, '');
+
+        // 3. 去除视频属性 (FHD, HD, SD, HDR, HEVC)
+        // 注意：这里不再去除 "4K", "8K"，因为它们通常是频道名的一部分 (如 CCTV16-4K)
+        s = s.replace(/(?:[\\s-_]|^)(F?HD|SD|HEVC|HDR|H\\.26[45])/g, ''); 
+        
+        // 4. 去除括号内容 [xxx] (xxx)
         s = s.replace(/[\\[\\(].*?[\\]\\)]/g, ''); 
         s = s.replace(/测试/g, '');
         
@@ -225,6 +231,7 @@ export const importMethods = `
                 const existingIndex = existingMap.get(newKey);
                 const existingChannel = this.channels[existingIndex];
                 
+                // 源包含检测
                 const existingUrls = new Set(existingChannel.sources.map(s => s.url));
                 const isSubset = newCh.sources.every(s => existingUrls.has(s.url));
 
@@ -241,21 +248,16 @@ export const importMethods = `
                 return;
             }
 
-            // B. 模糊/疑似匹配检测 (修复版)
+            // B. 模糊/疑似匹配检测
             let fuzzyIndex = -1;
-            
-            // 策略：如果名字清洗后相同，或者包含关系，必须进行数字边界检查
-            // 例如：CCTV1 (Clean) vs CCTV16 (Clean)
-            // CCTV16 包含 CCTV1，但 '1' 后面是 '6'，这是数字，所以不是同一个台。
             
             const cleanKeyMatchIndex = this.channels.findIndex(ch => {
                 const existingClean = this.cleanChannelName(ch.name);
                 
-                // 1. 完全相同：必定是疑似
+                // 1. 清洗后完全相同：必定是疑似
                 if (existingClean === cleanNewKey) return true;
                 
-                // 2. 包含关系 (长包含短)
-                // 避免短词 (如 "HD") 误判，长度限制 > 2
+                // 2. 包含关系检测
                 if (cleanNewKey.length <= 2 || existingClean.length <= 2) return false;
 
                 let longStr, shortStr;
@@ -266,14 +268,15 @@ export const importMethods = `
                     longStr = cleanNewKey;
                     shortStr = existingClean;
                 } else {
-                    return false; // 不包含
+                    return false;
                 }
 
-                // 3. 数字边界检查 (核心修复)
+                // 3. 数字边界检查 (重要！)
+                // 防止 CCTV1 匹配到 CCTV16
                 const matchIndex = longStr.indexOf(shortStr);
                 const nextChar = longStr[matchIndex + shortStr.length];
 
-                // 如果匹配结束后的下一个字符是数字，说明是类似 1 vs 16 的情况，判定为不同
+                // 如果匹配结束后的下一个字符是数字，判定为不同频道
                 if (nextChar && /\\d/.test(nextChar)) {
                     return false;
                 }
