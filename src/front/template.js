@@ -48,6 +48,12 @@ export const html = `
         </div>
 
         <div v-else>
+            <button class="btn btn-primary floating-save-btn position-fixed bottom-0 end-0 m-4"
+                    @click="saveData"
+                    title="保存所有更改">
+                💾
+            </button>
+
             <div class="card p-3 mb-4 shadow-sm">
                 <div class="row g-3">
                     <div class="col-12 d-flex justify-content-between align-items-center">

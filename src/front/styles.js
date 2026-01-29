@@ -25,5 +25,27 @@ export const cssContent = `
     .toast-enter-active, .toast-leave-active { transition: all 0.3s ease; }
     .toast-enter-from, .toast-leave-to { opacity: 0; transform: translateY(-20px); }
     
-    /* 自定义滚动条等其他样式可在此添加 */
+    /* 浮动保存按钮 */
+    .floating-save-btn {
+        width: 60px;
+        height: 60px;
+        font-size: 26px;
+        border-radius: 50%;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+        z-index: 1030;
+        transition: transform 0.2s, box-shadow 0.2s;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0;
+    }
+    
+    .floating-save-btn:hover {
+        transform: scale(1.1) translateY(-2px);
+        box-shadow: 0 6px 20px rgba(0,0,0,0.4);
+    }
+    
+    .floating-save-btn:active {
+        transform: scale(0.95);
+    }
 `;
