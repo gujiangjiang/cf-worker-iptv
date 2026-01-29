@@ -63,6 +63,7 @@ export const html = `
                     </div>
 
                     <div class="d-flex justify-content-end mt-4">
+                        <button class="btn btn-outline-secondary me-2" @click="resolveAllConflicts">按此规则处理所有</button>
                         <button class="btn btn-primary" @click="resolveConflict">确认处理</button>
                     </div>
                 </div>

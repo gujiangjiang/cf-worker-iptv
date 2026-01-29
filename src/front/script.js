@@ -58,28 +58,20 @@ export const jsContent = `
                 }, 3000);
             },
 
-            // 频道名称标准化 (模糊匹配逻辑)
             normalizeName(name) {
                 if (!name) return '';
-                // 1. 去除所有空格、横杠、下划线
-                // 2. 转为大写
-                // 3. 注意：保留 + 号，这样 CCTV5 和 CCTV5+ 会被视为不同
                 return name.replace(/[-_\\s]/g, '').toUpperCase();
             },
 
-            // 数据标准化：确保所有频道对象都有 urls 数组
             standardizeChannel(ch) {
                 let urls = [];
                 if (Array.isArray(ch.urls)) {
-                    urls = ch.urls.filter(u => u && u.trim() !== ''); // 过滤空链接
+                    urls = ch.urls.filter(u => u && u.trim() !== '');
                 } else if (ch.url) {
                     urls = [ch.url];
                 }
-                
-                // 确保 tvgName 存在
                 const displayName = ch.name || '未知频道';
                 const tvgName = (ch.tvgName !== undefined && ch.tvgName !== null && ch.tvgName !== '') ? ch.tvgName : displayName;
-
                 return {
                     ...ch,
                     name: displayName,
@@ -133,29 +125,25 @@ export const jsContent = `
                 });
             },
 
-            // 核心导入逻辑：包含内部去重 + 外部冲突检测
             processImports(rawChannels) {
                 let internalMergeCount = 0;
                 
-                // --- 第一步：内部去重 (处理导入文件本身的重复) ---
+                // 1. 内部去重
                 const uniqueNewChannels = [];
-                const tempMap = new Map(); // NormalizedKey -> index in uniqueNewChannels
+                const tempMap = new Map();
 
                 rawChannels.forEach(ch => {
                     ch = this.standardizeChannel(ch);
                     const key = this.normalizeName(ch.name);
                     
                     if (!key) {
-                        uniqueNewChannels.push(ch); // 无名频道直接添加
+                        uniqueNewChannels.push(ch);
                         return;
                     }
 
                     if (tempMap.has(key)) {
-                        // 发现内部重复！自动合并源
                         const existingIndex = tempMap.get(key);
                         const existingCh = uniqueNewChannels[existingIndex];
-                        
-                        // 合并 URLs 并去重
                         const mergedUrls = [...new Set([...existingCh.urls, ...ch.urls])];
                         uniqueNewChannels[existingIndex].urls = mergedUrls;
                         internalMergeCount++;
@@ -169,11 +157,10 @@ export const jsContent = `
                     this.showToast(\`自动合并了 \${internalMergeCount} 个同名频道的源\`, 'success');
                 }
 
-                // --- 第二步：外部冲突检测 (与现有列表对比) ---
+                // 2. 外部冲突检测
                 const safeToAdd = [];
                 const conflicts = [];
                 
-                // 建立现有频道的映射表
                 const existingMap = new Map();
                 this.channels.forEach((ch, index) => {
                     const key = this.normalizeName(ch.name);
@@ -182,9 +169,7 @@ export const jsContent = `
 
                 uniqueNewChannels.forEach(newCh => {
                     const key = this.normalizeName(newCh.name);
-                    
                     if (existingMap.has(key)) {
-                        // 发现与现有数据冲突
                         conflicts.push({
                             newItem: newCh,
                             existingIndex: existingMap.get(key)
@@ -194,13 +179,10 @@ export const jsContent = `
                     }
                 });
 
-                // 1. 添加无冲突的
                 if (safeToAdd.length > 0) {
-                    // 插入到列表头部
                     this.channels = [...safeToAdd, ...this.channels];
                 }
 
-                // 2. 处理冲突队列
                 if (conflicts.length > 0) {
                     this.conflictModal.queue = conflicts;
                     this.loadNextConflict();
@@ -226,9 +208,7 @@ export const jsContent = `
                 const oldUrls = existingItem.urls || [];
                 const newUrls = conflict.newItem.urls || [];
                 
-                // 合并预览：去重
                 this.conflictModal.mergedUrls = [...new Set([...oldUrls, ...newUrls])];
-                // 默认选中旧的主源
                 this.conflictModal.selectedPrimary = oldUrls.length > 0 ? oldUrls[0] : newUrls[0];
                 
                 this.conflictModal.show = true;
@@ -239,29 +219,75 @@ export const jsContent = `
                 return existingItem && existingItem.urls && existingItem.urls.includes(url);
             },
 
-            resolveConflict() {
-                const action = this.conflictModal.action;
-                const index = this.conflictModal.existingIndex;
-                const newItem = this.conflictModal.currentItem;
-
+            // 抽离的通用应用逻辑
+            applyConflictLogic(action, index, newItem, primaryUrl, mergedUrls) {
                 if (action === 'new') {
-                    // 覆盖：直接替换对象
                     this.channels[index] = newItem;
                 } else if (action === 'merge') {
-                    // 合并：更新 URLs
-                    const primary = this.conflictModal.selectedPrimary;
-                    let finalUrls = this.conflictModal.mergedUrls;
-                    
-                    // 调整主源顺序
-                    finalUrls = finalUrls.filter(u => u !== primary);
-                    finalUrls.unshift(primary);
-                    
+                    let finalUrls = mergedUrls;
+                    // 确保主源置顶
+                    if (primaryUrl) {
+                        finalUrls = finalUrls.filter(u => u !== primaryUrl);
+                        finalUrls.unshift(primaryUrl);
+                    }
                     this.channels[index].urls = finalUrls;
                 }
                 // action === 'old' 则不做任何修改
+            },
+
+            // 处理单条冲突 (按钮：确认处理)
+            resolveConflict() {
+                this.applyConflictLogic(
+                    this.conflictModal.action,
+                    this.conflictModal.existingIndex,
+                    this.conflictModal.currentItem,
+                    this.conflictModal.selectedPrimary,
+                    this.conflictModal.mergedUrls
+                );
 
                 this.conflictModal.queue.shift();
                 this.loadNextConflict();
+            },
+
+            // 处理所有剩余冲突 (按钮：按此规则处理所有)
+            resolveAllConflicts() {
+                const action = this.conflictModal.action;
+
+                // 1. 处理当前正在显示的一条 (尊重用户当前的选择)
+                this.applyConflictLogic(
+                    action,
+                    this.conflictModal.existingIndex,
+                    this.conflictModal.currentItem,
+                    this.conflictModal.selectedPrimary,
+                    this.conflictModal.mergedUrls
+                );
+                this.conflictModal.queue.shift();
+
+                // 2. 循环处理队列中剩余的项
+                while(this.conflictModal.queue.length > 0) {
+                    const conflict = this.conflictModal.queue[0];
+                    const index = conflict.existingIndex;
+                    const existingItem = this.channels[index];
+                    const newItem = conflict.newItem;
+
+                    let primaryUrl = '';
+                    let mergedUrls = [];
+
+                    if (action === 'merge') {
+                        const oldUrls = existingItem.urls || [];
+                        const newUrls = newItem.urls || [];
+                        mergedUrls = [...new Set([...oldUrls, ...newUrls])];
+                        // 批量处理时的默认规则：现有源优先
+                        primaryUrl = oldUrls.length > 0 ? oldUrls[0] : newUrls[0];
+                    }
+
+                    this.applyConflictLogic(action, index, newItem, primaryUrl, mergedUrls);
+                    this.conflictModal.queue.shift();
+                }
+
+                // 3. 关闭模态框
+                this.conflictModal.show = false;
+                this.showToast('已批量处理所有重复项', 'success');
             },
 
             handleFileUpload(event) {
@@ -354,7 +380,7 @@ export const jsContent = `
                         if (currentInfo.name) {
                             rawChannels.push({
                                 ...currentInfo,
-                                urls: [line] // 初始封装为数组
+                                urls: [line]
                             });
                             currentInfo = {};
                         }
@@ -366,7 +392,6 @@ export const jsContent = `
                     return;
                 }
 
-                // 调用新的导入处理流程
                 this.processImports(rawChannels);
             },
             addChannel() {
