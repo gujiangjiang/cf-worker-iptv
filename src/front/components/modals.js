@@ -64,7 +64,7 @@ export const modalTemplate = `
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button class="btn btn-primary" @click="modals.systemSettings = false">确定</button>
+                    <button class="btn btn-primary" @click="saveSystemSettingsAndClose">确定并保存</button>
                 </div>
             </div>
         </div>

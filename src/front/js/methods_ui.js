@@ -97,6 +97,12 @@ export const uiMethods = `
         this.modals.systemSettings = true;
     },
 
+    // 保存系统设置并关闭 (新增)
+    async saveSystemSettingsAndClose() {
+        await this.saveSettingsOnly();
+        this.modals.systemSettings = false;
+    },
+
     // 打开登录弹窗
     openLoginModal() {
         this.modals.login = true;

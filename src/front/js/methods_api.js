@@ -85,6 +85,9 @@ export const apiMethods = `
                 this.modals.login = false; // 关闭登录弹窗
                 localStorage.setItem('iptv_pwd', this.password);
                 
+                // 登录后同步一次 publicGuestConfig，以便在界面上能即时反映管理员视角的配置
+                this.publicGuestConfig = JSON.parse(JSON.stringify(this.settings.guestConfig));
+
                 this.sortChannelsByGroup();
                 this.$nextTick(() => { this.initSortable(); });
                 this.showToast('登录成功', 'success');
@@ -102,7 +105,8 @@ export const apiMethods = `
         this.password = '';
         localStorage.removeItem('iptv_pwd');
         this.channels = []; // 清空数据
-        this.settings.guestConfig = { allowViewList: false }; // 重置敏感配置
+        // 重置敏感配置
+        this.settings.guestConfig = { allowViewList: false, allowSub: true, allowFormats: ['m3u', 'txt'] }; 
         this.showToast('已退出登录', 'info');
         
         // 重新初始化访客状态
@@ -136,6 +140,28 @@ export const apiMethods = `
         this.loading = false;
     },
 
+    // 独立保存系统设置 (新增)
+    async saveSettingsOnly() {
+        this.loading = true;
+        try {
+            const res = await fetch('/api/settings', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': this.password },
+                body: JSON.stringify(this.settings)
+            });
+            if(res.ok) {
+                this.showToast('系统设置已保存', 'success');
+                // 同步更新本地访客配置缓存，确保登出后或界面逻辑立即生效
+                this.publicGuestConfig = JSON.parse(JSON.stringify(this.settings.guestConfig));
+            } else {
+                this.showToast('保存设置失败', 'error');
+            }
+        } catch(e) {
+            this.showToast('保存设置请求出错', 'error');
+        }
+        this.loading = false;
+    },
+
     // 保存所有数据
     async saveData() {
         this.loading = true;
@@ -160,7 +186,6 @@ export const apiMethods = `
 
             if(resList.ok && resSettings.ok && resGroups.ok) {
                 this.showToast('保存成功！', 'success');
-                // 更新一下本地的 publicGuestConfig，以便退出后立马生效
                 this.publicGuestConfig = JSON.parse(JSON.stringify(this.settings.guestConfig));
             }
             else this.showToast('保存失败', 'error');
