@@ -118,9 +118,11 @@ export const layoutTemplate = `
                                         </div>
                                     </td>
                                     <td v-if="isAuth" class="text-center">
-                                        <button class="btn btn-sm btn-outline-success me-2" @click="openPlayer(item)" title="预览播放">▶️</button>
-                                        <button class="btn btn-sm btn-outline-primary me-2" @click="openEditChannelModal(index)">编辑</button>
-                                        <button class="btn btn-sm btn-outline-danger" @click="openConfirmModal('deleteChannel', index)">删除</button>
+                                        <div class="d-flex justify-content-center gap-2">
+                                            <button class="btn btn-sm btn-outline-success border-0" @click="openPlayer(item)" title="预览播放">▶️</button>
+                                            <button class="btn btn-sm btn-outline-primary border-0" @click="openEditChannelModal(index)" title="编辑">✏️</button>
+                                            <button class="btn btn-sm btn-outline-danger border-0" @click="openConfirmModal('deleteChannel', index)" title="删除">🗑️</button>
+                                        </div>
                                     </td>
                                 </tr>
                             </tbody>
