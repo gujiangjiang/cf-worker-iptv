@@ -209,7 +209,9 @@ export const html = `
                     <div class="form-check mb-3"><input class="form-check-input" type="radio" value="merge" v-model="conflictModal.action"><label class="form-check-label">合并保留 (推荐)</label></div>
                     <div v-if="conflictModal.action === 'merge'" class="source-list">
                         <div class="source-item" v-for="(url, idx) in conflictModal.mergedUrls" :key="idx" @click="conflictModal.selectedPrimary = url">
-                            <input type="radio" :checked="conflictModal.selectedPrimary === url" name="primaryUrl"><span class="text-truncate">{{ url }}</span>
+                            <input type="radio" :checked="conflictModal.selectedPrimary === url" name="primaryUrl" class="form-check-input me-2 flex-shrink-0">
+                            <span class="text-truncate flex-grow-1" :title="url">{{ url }}</span>
+                            <span v-if="conflictModal.selectedPrimary === url" class="badge bg-primary ms-2 flex-shrink-0">默认源</span>
                         </div>
                     </div>
                     <div class="d-flex justify-content-end mt-4">
