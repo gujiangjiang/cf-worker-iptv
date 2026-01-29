@@ -1,8 +1,29 @@
 /**
  * 组件：模态框集合
- * 包含：二次确认、频道编辑、分组管理、批量添加、全局设置、冲突处理、分组查看、系统设置、登录
+ * 包含：二次确认、频道编辑、分组管理、批量添加、全局设置、冲突处理、分组查看、系统设置、登录、播放器
  */
 export const modalTemplate = `
+    <div v-if="modals.player" class="modal-overlay" style="z-index: 3000;">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content bg-black text-white" style="border: 1px solid #444;">
+                <div class="modal-header border-bottom-0">
+                    <h5 class="modal-title text-truncate d-flex align-items-center">
+                        <span class="badge bg-danger me-2 animate-pulse">LIVE</span>
+                        {{ playingName }}
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" @click="closePlayer"></button>
+                </div>
+                <div class="modal-body p-0 d-flex justify-content-center bg-black align-items-center" style="min-height: 400px; background: #000;">
+                     <video id="video-player" controls style="width: 100%; max-height: 70vh; outline: none;" autoplay></video>
+                </div>
+                 <div class="modal-footer border-top-0 py-2 d-flex flex-column align-items-start">
+                    <small class="text-white-50 text-truncate w-100 font-monospace mb-1">正在播放: {{ playingUrl }}</small>
+                    <small class="text-warning" style="font-size: 0.75rem;">提示: 如无法播放，可能是因为源地址是 HTTP 而当前页面是 HTTPS (混合内容限制)，请尝试允许浏览器加载不安全内容。</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div v-if="modals.login" class="modal-overlay" style="z-index: 2000;">
         <div class="modal-dialog" style="max-width: 400px;">
             <div class="modal-content">

@@ -2,7 +2,6 @@
  * 前端 UI 交互逻辑模块
  */
 export const uiMethods = `
-    // 辅助：生成唯一ID
     generateId() {
         return Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
     },
@@ -15,11 +14,9 @@ export const uiMethods = `
         this.toastTimer = setTimeout(() => { this.toast.show = false; }, 3000);
     },
 
-    // 首页列表排序 (只在有拖拽句柄时初始化)
     initSortable() {
         const el = document.getElementById('channel-list');
         if (!el) return;
-        // 如果未登录，不初始化拖拽
         if (!this.isAuth) return; 
 
         if (this.sortableInstance) this.sortableInstance.destroy();
@@ -35,7 +32,6 @@ export const uiMethods = `
         });
     },
 
-    // 模态框内直播源排序
     initSourceSortable() {
         const el = document.getElementById('source-list-container');
         if (!el) return;
@@ -52,7 +48,6 @@ export const uiMethods = `
         });
     },
 
-    // 分组管理模态框排序
     initGroupSortable() {
         const el = document.getElementById('group-list-container');
         if (!el) return;
@@ -70,7 +65,6 @@ export const uiMethods = `
         });
     },
 
-    // EPG 列表排序
     initEpgSortable() {
         const el = document.getElementById('epg-list-container');
         if (!el) return;
@@ -92,21 +86,87 @@ export const uiMethods = `
         this.$nextTick(() => this.initGroupSortable());
     },
     
-    // 打开系统设置
     openSystemSettings() {
         this.modals.systemSettings = true;
     },
 
-    // 保存系统设置并关闭 (新增)
     async saveSystemSettingsAndClose() {
         await this.saveSettingsOnly();
         this.modals.systemSettings = false;
     },
 
-    // 打开登录弹窗
     openLoginModal() {
         this.modals.login = true;
     },
+
+    // --- 播放器逻辑开始 ---
+    openPlayer(channel) {
+        // 1. 查找有效源
+        const sources = channel.sources.filter(s => s.enabled);
+        if (sources.length === 0) return this.showToast('该频道没有启用的直播源', 'warning');
+        
+        // 2. 确定播放地址 (优先主源，否则第一个)
+        let url = sources.find(s => s.isPrimary)?.url || sources[0].url;
+        
+        this.playingUrl = url;
+        this.playingName = channel.name;
+        this.modals.player = true;
+        
+        // 3. 初始化播放器 (等待 DOM 渲染)
+        this.$nextTick(() => {
+            this.initHlsPlayer();
+        });
+    },
+
+    initHlsPlayer() {
+        const video = document.getElementById('video-player');
+        if (!video) return;
+
+        // 如果之前有实例，先销毁
+        if (this.hlsInstance) {
+            this.hlsInstance.destroy();
+            this.hlsInstance = null;
+        }
+
+        // HLS.js 支持检测
+        if (Hls.isSupported()) {
+            const hls = new Hls();
+            this.hlsInstance = hls;
+            hls.loadSource(this.playingUrl);
+            hls.attachMedia(video);
+            hls.on(Hls.Events.MANIFEST_PARSED, function() {
+                video.play().catch(e => console.log('Auto-play prevented:', e));
+            });
+            hls.on(Hls.Events.ERROR, (event, data) => {
+                if (data.fatal) {
+                    console.error('HLS Error:', data);
+                    this.showToast('播放出错: ' + data.details, 'error');
+                }
+            });
+        } 
+        // 原生 HLS 支持 (Safari)
+        else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+            video.src = this.playingUrl;
+            video.addEventListener('loadedmetadata', function() {
+                video.play();
+            });
+        } else {
+            this.showToast('您的浏览器不支持 HLS 播放', 'error');
+        }
+    },
+
+    closePlayer() {
+        this.modals.player = false;
+        const video = document.getElementById('video-player');
+        if (video) video.pause();
+        
+        if (this.hlsInstance) {
+            this.hlsInstance.destroy();
+            this.hlsInstance = null;
+        }
+        this.playingUrl = '';
+    },
+    // --- 播放器逻辑结束 ---
 
     sortChannelsByGroup() {
         const groupOrder = {};
