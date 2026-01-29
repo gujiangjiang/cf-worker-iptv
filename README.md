@@ -35,9 +35,10 @@
    - 命名为 `iptv-manager` (或任意名称)，点击 **Deploy**。
 
 3. **粘贴代码**
-   - 点击 **Edit code**。
-   - 将本项目中的 `worker.js` 内容完全覆盖粘贴进去。
-   - 保存并部署。
+   - 本项目包含两个核心文件，请手动创建：
+     - `src/front/template.js`: 粘贴前端模板代码。
+     - `src/js/worker.js`: 粘贴后端逻辑代码。
+   - **注意**：网页版编辑器可能不支持多文件结构，建议使用 **方式二 Wrangler CLI** 部署，或者将 `template.js` 的内容直接合并回 `worker.js` 使用。
 
 4. **配置环境变量 (关键步骤)**
    - 返回 Worker 的 **Settings** -> **Variables** 页面。
@@ -49,7 +50,7 @@
      - KV Namespace: 选择第 1 步创建的 `IPTV_KV`。
    - 点击 **Save and deploy**。
 
-### 方式二：使用 Wrangler CLI
+### 方式二：使用 Wrangler CLI (推荐)
 
 1. 克隆项目
    ```bash
@@ -61,21 +62,11 @@
    ```bash
    npx wrangler kv:namespace create IPTV_KV
    ```
-   *将输出的 ID 填入 wrangler.toml*
+   *将输出的 ID 填入 wrangler.toml 的 `id` 字段中*
 
 3. 配置 `wrangler.toml`
-   ```toml
-   name = "iptv-manager"
-   main = "worker.js"
-   compatibility_date = "2023-10-30"
-
-   [[kv_namespaces]]
-   binding = "IPTV_KV"
-   id = "替换为你的_KV_ID"
-
-   [vars]
-   PASSWORD = "your_secret_password"
-   ```
+   - 修改 `id` 为上一步获取的 KV ID。
+   - 修改 `PASSWORD` 为你想要的密码。
 
 4. 部署
    ```bash
