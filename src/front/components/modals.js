@@ -6,7 +6,7 @@ export const modalTemplate = `
     <div v-if="modals.player" class="modal-overlay" style="z-index: 3000;">
         <div class="modal-dialog modal-lg">
             <div class="modal-content bg-dark text-white" style="border: 1px solid #444;">
-                <div class="modal-header border-bottom-0 d-flex justify-content-between align-items-center">
+                <div class="modal-header border-bottom-0 d-flex justify-content-between align-items-center" style="background-color: transparent !important; color: white !important;">
                     <h5 class="modal-title text-truncate d-flex align-items-center" style="max-width: 90%;">
                         <span class="badge bg-danger me-2 animate-pulse">LIVE</span>
                         {{ playingName }}
@@ -16,10 +16,10 @@ export const modalTemplate = `
                 <div class="modal-body p-0 d-flex justify-content-center bg-black align-items-center" style="min-height: 400px; background: #000;">
                      <video id="video-player" controls style="width: 100%; max-height: 70vh; outline: none;" autoplay></video>
                 </div>
-                 <div class="modal-footer border-top-0 py-2 d-flex flex-column align-items-start">
+                 <div class="modal-footer border-top-0 py-2 d-flex flex-column align-items-start" style="background-color: transparent !important; color: white !important;">
                     
                     <div v-if="playingChannel && playingChannel.sources.filter(s => s.enabled).length > 1" class="w-100 mb-2">
-                        <label class="small text-muted mb-1">切换直播源:</label>
+                        <label class="small text-white-50 mb-1">切换直播源:</label>
                         <select class="form-select form-select-sm bg-secondary text-white border-0" :value="playingUrl" @change="switchPlayerSource($event.target.value)">
                             <option v-for="(source, idx) in playingChannel.sources.filter(s => s.enabled)" :key="source._id || idx" :value="source.url">
                                 源 {{ idx + 1 }}: {{ source.url }}

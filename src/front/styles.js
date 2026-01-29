@@ -11,7 +11,8 @@ export const cssContent = `
     .toast-enter-active, .toast-leave-active { transition: all 0.3s ease; }
     .toast-enter-from, .toast-leave-to { opacity: 0; transform: translateY(-20px); }
     
-    .toast-container { z-index: 2000 !important; }
+    /* 修复：将 Toast 层级提升到最高，超过播放器的 3000 */
+    .toast-container { z-index: 9999 !important; }
     
     .floating-save-btn { width: 60px; height: 60px; font-size: 26px; border-radius: 50%; box-shadow: 0 4px 15px rgba(0,0,0,0.3); z-index: 1030; display: flex; align-items: center; justify-content: center; transition: transform 0.2s; }
     .floating-save-btn:hover { transform: scale(1.1); }
@@ -23,6 +24,7 @@ export const cssContent = `
     .confirm-modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.6); z-index: 1200; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(2px); }
 
     .modal-content { border: none; border-radius: 12px; box-shadow: 0 15px 40px rgba(0,0,0,0.25); background-color: #fff; overflow: hidden; }
+    /* 注意：这里的全局样式会影响所有模态框，播放器需要单独覆盖 */
     .modal-header { background-color: #e7f1ff; color: #004085; border-bottom: none; padding: 15px 25px; }
     .modal-body { padding: 25px; background-color: #fff; }
     .modal-footer { border-top: 1px solid #f0f0f0; padding: 15px 25px; background-color: #fff; }
@@ -64,6 +66,6 @@ export const cssContent = `
     .badge-old { background: #6c757d; color: white; }
     .badge-new { background: #0d6efd; color: white; }
 
-    /* 页脚链接悬停效果 (新增) */
+    /* 页脚链接悬停效果 */
     .hover-link:hover { color: #0d6efd !important; text-decoration: underline !important; }
 `;
