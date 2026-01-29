@@ -1,8 +1,39 @@
 /**
  * 组件：模态框集合
- * 包含：二次确认、频道编辑、分组管理、批量添加、全局设置、冲突处理、分组查看、系统设置、登录、播放器
+ * 包含：二次确认、频道编辑、分组管理、批量添加、全局设置、冲突处理、分组查看、系统设置、登录、播放器、导入
  */
 export const modalTemplate = `
+    <div v-if="modals.import" class="modal-overlay" style="z-index: 1070;" @click.self="modals.import = false">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">📥 导入直播源</h5>
+                    <button type="button" class="btn-close" @click="modals.import = false"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-4">
+                        <label class="form-label fw-bold">📁 方式一：本地文件 (.m3u, .m3u8)</label>
+                        <input type="file" class="form-control" @change="handleFileUpload" accept=".m3u,.m3u8">
+                        <div class="form-text">选择文件后将立即开始解析并导入。</div>
+                    </div>
+                    
+                    <hr class="my-4">
+
+                    <div class="mb-2">
+                        <label class="form-label fw-bold">🌐 方式二：网络链接</label>
+                        <div class="input-group">
+                            <input type="text" class="form-control" v-model="importUrl" placeholder="https://example.com/playlist.m3u">
+                            <button class="btn btn-primary" @click="handleUrlImport" :disabled="loading">
+                                <span v-if="loading" class="spinner-border spinner-border-sm me-1"></span>
+                                导入
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div v-if="modals.player" class="modal-overlay" style="z-index: 3000;">
         <div class="modal-dialog modal-lg">
             <div class="modal-content bg-dark text-white" style="border: 1px solid #444;">

@@ -54,20 +54,22 @@ export const layoutTemplate = `
             <button v-if="isAuth" class="btn btn-primary floating-save-btn position-fixed bottom-0 end-0 m-4" @click="saveData" title="保存">💾</button>
 
             <div v-if="isAuth" class="card p-3 mb-4 shadow-sm">
-                <div class="row g-3">
-                    <div class="col-12 d-flex justify-content-between align-items-center">
-                            <h5 class="mb-0">快捷操作</h5>
-                            <div>
-                                <button class="btn btn-sm btn-outline-secondary me-2" @click="openGroupManager">📁 分组管理</button>
-                                <button class="btn btn-sm btn-outline-secondary" @click="openSettingsModal">⚙️ M3U 参数</button>
-                            </div>
-                    </div>
-                    <div class="col-md-5"><input type="file" class="form-control" @change="handleFileUpload" accept=".m3u,.m3u8"></div>
-                    <div class="col-md-7"><div class="input-group"><input type="text" class="form-control" v-model="importUrl" placeholder="输入 M3U 链接..."><button class="btn btn-primary" @click="handleUrlImport">导入</button></div></div>
-                    <div class="col-12 d-flex justify-content-end border-top pt-3 mt-3">
-                            <button class="btn btn-danger me-2" @click="openConfirmModal('clearAll')">清空</button>
-                            <button class="btn btn-success" @click="saveData">💾 保存云端</button>
-                    </div>
+                <div class="d-flex gap-2 flex-wrap">
+                    <button class="btn btn-success flex-grow-1" @click="openImportModal">
+                        <span class="fs-5 d-block">📥</span> 导入直播源
+                    </button>
+                    <button class="btn btn-info text-white flex-grow-1" @click="openGroupManager">
+                        <span class="fs-5 d-block">📁</span> 分组管理
+                    </button>
+                    <button class="btn btn-secondary flex-grow-1" @click="openSettingsModal">
+                        <span class="fs-5 d-block">⚙️</span> 参数设置
+                    </button>
+                    <button class="btn btn-danger flex-grow-1" @click="openConfirmModal('clearAll')">
+                        <span class="fs-5 d-block">🗑️</span> 清空列表
+                    </button>
+                    <button class="btn btn-primary flex-grow-1" @click="saveData">
+                        <span class="fs-5 d-block">💾</span> 保存变更
+                    </button>
                 </div>
             </div>
 

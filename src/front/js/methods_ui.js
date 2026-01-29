@@ -86,6 +86,12 @@ export const uiMethods = `
         this.$nextTick(() => this.initGroupSortable());
     },
     
+    // 打开导入模态框 (新增)
+    openImportModal() {
+        this.modals.import = true;
+        this.importUrl = ''; // 重置输入框
+    },
+
     openSystemSettings() {
         this.modals.systemSettings = true;
     },
@@ -104,27 +110,22 @@ export const uiMethods = `
         const validSources = channel.sources.filter(s => s.enabled);
         if (validSources.length === 0) return this.showToast('该频道没有启用的直播源', 'warning');
         
-        // 保存完整频道对象，以便切换
         this.playingChannel = channel;
         this.playingName = channel.name;
 
-        // 默认播放主源，如果主源未启用或不存在，则播放第一个有效源
         const primarySource = validSources.find(s => s.isPrimary) || validSources[0];
         this.playingUrl = primarySource.url;
         
         this.modals.player = true;
         
-        // 3. 初始化播放器 (等待 DOM 渲染)
         this.$nextTick(() => {
             this.initHlsPlayer();
         });
     },
 
-    // 切换播放源
     switchPlayerSource(url) {
         if (url === this.playingUrl) return;
         this.playingUrl = url;
-        // 重新加载播放器
         this.$nextTick(() => {
             this.initHlsPlayer();
         });
@@ -134,13 +135,11 @@ export const uiMethods = `
         const video = document.getElementById('video-player');
         if (!video) return;
 
-        // 如果之前有实例，先销毁
         if (this.hlsInstance) {
             this.hlsInstance.destroy();
             this.hlsInstance = null;
         }
 
-        // HLS.js 支持检测
         if (Hls.isSupported()) {
             const hls = new Hls();
             this.hlsInstance = hls;
@@ -152,12 +151,10 @@ export const uiMethods = `
             hls.on(Hls.Events.ERROR, (event, data) => {
                 if (data.fatal) {
                     console.error('HLS Error:', data);
-                    // 仅显示严重错误，避免普通 buffer 错误刷屏
                     this.showToast('播放出错: ' + data.details, 'error');
                 }
             });
         } 
-        // 原生 HLS 支持 (Safari)
         else if (video.canPlayType('application/vnd.apple.mpegurl')) {
             video.src = this.playingUrl;
             video.addEventListener('loadedmetadata', function() {

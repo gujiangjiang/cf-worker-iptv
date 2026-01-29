@@ -40,7 +40,7 @@ export const dataContent = `
     hlsInstance: null, // hls.js 实例
     playingUrl: '',    // 当前播放地址
     playingName: '',   // 当前播放频道名
-    playingChannel: null, // 新增：当前播放的完整频道对象 (用于多源切换)
+    playingChannel: null, // 当前播放的完整频道对象
 
     modals: {
         login: false,           
@@ -50,7 +50,8 @@ export const dataContent = `
         groupManager: false,
         groupChannelAdder: false,
         groupViewer: false,
-        player: false           
+        player: false,
+        import: false           // 新增：导入模态框
     },
 
     groupAdderData: {

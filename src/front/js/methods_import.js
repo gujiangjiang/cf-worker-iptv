@@ -68,6 +68,8 @@ export const importMethods = `
         reader.onload = (e) => {
             this.parseM3U(e.target.result);
             event.target.value = '';
+            // 新增：导入成功后关闭模态框
+            this.modals.import = false;
         };
         reader.readAsText(file);
     },
@@ -229,7 +231,6 @@ export const importMethods = `
         this.conflictModal.existingIndex = conflict.existingIndex;
         this.conflictModal.action = 'merge'; 
         
-        // 提取纯 URL 用于展示
         const oldUrls = existingItem.sources.map(s => s.url);
         const newUrls = conflict.newItem.sources.map(s => s.url);
         this.conflictModal.mergedUrls = [...new Set([...oldUrls, ...newUrls])];
@@ -242,11 +243,9 @@ export const importMethods = `
         return existingItem && existingItem.sources.some(s => s.url === url);
     },
 
-    // 冲突应用逻辑 (适配新结构)
     applyConflictLogic(action, index, newItem, primaryUrl, mergedUrlStrings) {
         if (action === 'new') this.channels[index] = newItem;
         else if (action === 'merge') {
-            // 合并时重新生成源对象，带ID
             const newSources = mergedUrlStrings.map(u => ({
                 url: u,
                 enabled: true,
@@ -287,10 +286,38 @@ export const importMethods = `
         this.showToast('已批量处理所有重复项', 'success');
     },
 
-    // 新增：取消冲突处理
     cancelConflict() {
         this.conflictModal.show = false;
         this.conflictModal.queue = [];
         this.showToast('已取消导入', 'info');
+    },
+
+    // 新增：URL 导入逻辑中增加关闭模态框
+    async handleUrlImport() {
+        if (!this.importUrl) return this.showToast('请输入有效的 URL', 'error');
+        this.loading = true;
+        try {
+            const res = await fetch('/api/fetch-m3u', {
+                method: 'POST',
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Authorization': this.password
+                },
+                body: JSON.stringify({ url: this.importUrl })
+            });
+            
+            if (res.ok) {
+                const text = await res.text();
+                this.parseM3U(text);
+                this.importUrl = '';
+                // 新增：导入成功后关闭模态框
+                this.modals.import = false;
+            } else {
+                this.showToast('导入失败: ' + res.statusText, 'error');
+            }
+        } catch (e) {
+            this.showToast('网络请求出错，请检查链接', 'error');
+        }
+        this.loading = false;
     }
 `;
