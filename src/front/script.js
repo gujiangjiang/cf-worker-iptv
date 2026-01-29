@@ -15,18 +15,17 @@ export const jsContent = `
                     catchup: '',
                     catchupSource: ''
                 },
-                // Toast 状态
                 toast: {
                     show: false,
                     message: '',
-                    type: 'success' // success, error
+                    type: 'success'
                 },
                 toastTimer: null,
-                
                 showSettings: false,
                 loading: false,
                 importUrl: '',
-                baseUrl: window.location.origin
+                baseUrl: window.location.origin,
+                sortableInstance: null
             }
         },
         computed: {
@@ -42,16 +41,14 @@ export const jsContent = `
             }
         },
         methods: {
-            // 显示 Toast 消息
             showToast(message, type = 'success') {
                 this.toast.message = message;
                 this.toast.type = type;
                 this.toast.show = true;
-                
                 if (this.toastTimer) clearTimeout(this.toastTimer);
                 this.toastTimer = setTimeout(() => {
                     this.toast.show = false;
-                }, 3000); // 3秒后自动消失
+                }, 3000);
             },
 
             async login() {
@@ -71,12 +68,39 @@ export const jsContent = `
                         this.settings = { ...this.settings, ...remoteSettings };
                         this.isAuth = true;
                         localStorage.setItem('iptv_pwd', this.password);
+                        
+                        // 数据加载完成并渲染 DOM 后，初始化拖拽
+                        this.$nextTick(() => {
+                            this.initSortable();
+                        });
                     }
                 } catch(e) {
                     this.showToast('连接服务器失败', 'error');
                 }
                 this.loading = false;
             },
+            
+            // 初始化拖拽排序
+            initSortable() {
+                const el = document.getElementById('channel-list');
+                if (!el) return;
+                
+                // 防止重复初始化
+                if (this.sortableInstance) this.sortableInstance.destroy();
+
+                this.sortableInstance = Sortable.create(el, {
+                    handle: '.drag-handle', // 指定只有拖拽手柄可以触发拖拽
+                    animation: 150, // 动画毫秒数
+                    ghostClass: 'sortable-ghost', // 占位符样式
+                    onEnd: (evt) => {
+                        // 同步数据顺序：从旧位置移除，插入新位置
+                        const item = this.channels[evt.oldIndex];
+                        this.channels.splice(evt.oldIndex, 1);
+                        this.channels.splice(evt.newIndex, 0, item);
+                    }
+                });
+            },
+
             handleFileUpload(event) {
                 const file = event.target.files[0];
                 if (!file) return;
@@ -177,7 +201,6 @@ export const jsContent = `
                     return;
                 }
 
-                // 确认框涉及用户决策，仍保留为 confirm
                 let msg = \`解析到 \${newChannels.length} 个频道。\`;
                 if(settingsFound) msg += '\\n已自动提取并更新了全局设置。';
                 msg += '\\n选择"确定"追加到现有列表，选择"取消"覆盖现有列表。';
@@ -194,13 +217,6 @@ export const jsContent = `
             },
             removeChannel(index) {
                 this.channels.splice(index, 1);
-            },
-            moveUp(index) {
-                if (index > 0) {
-                    const item = this.channels[index];
-                    this.channels.splice(index, 1);
-                    this.channels.splice(index - 1, 0, item);
-                }
             },
             clearAll() {
                 if(confirm('确定要清空所有频道吗？')) {

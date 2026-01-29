@@ -7,6 +7,20 @@ export const cssContent = `
     .container { max-width: 1300px; margin-top: 30px; }
     .channel-row input { font-size: 0.9rem; }
     
+    /* 拖拽手柄样式 */
+    .drag-handle {
+        cursor: grab;
+        user-select: none;
+    }
+    .drag-handle:active {
+        cursor: grabbing;
+    }
+    /* 拖拽占位符样式 (SortableJS 自动添加的类) */
+    .sortable-ghost {
+        background-color: #e9ecef !important;
+        opacity: 0.5;
+    }
+    
     /* 加载遮罩层 */
     .loading-overlay { 
         position: fixed; 

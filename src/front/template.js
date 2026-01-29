@@ -13,6 +13,7 @@ export const html = `
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>IPTV 源管理平台</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/vue@3.2.47/dist/vue.global.prod.js"></script>
     <style>
         ${cssContent}
@@ -119,24 +120,27 @@ export const html = `
                         <table class="table table-hover mb-0 align-middle">
                             <thead class="table-light">
                                 <tr>
+                                    <th style="width: 5%" class="text-center">排序</th>
                                     <th style="width: 12%">分组</th>
                                     <th style="width: 12%">EPG 名称</th>
                                     <th style="width: 15%">显示名称</th>
                                     <th style="width: 15%">Logo URL</th>
-                                    <th style="width: 36%">直播源 URL</th>
-                                    <th style="width: 10%">操作</th>
+                                    <th style="width: 35%">直播源 URL</th>
+                                    <th style="width: 6%" class="text-center">操作</th>
                                 </tr>
                             </thead>
-                            <tbody>
+                            <tbody id="channel-list">
                                 <tr v-for="(item, index) in channels" :key="index" class="channel-row">
+                                    <td class="text-center cursor-move drag-handle" title="按住拖动排序">
+                                        <span class="text-secondary fs-5">⠿</span>
+                                    </td>
                                     <td><input type="text" class="form-control form-control-sm" v-model="item.group"></td>
                                     <td><input type="text" class="form-control form-control-sm" v-model="item.tvgName" placeholder="tvg-name"></td>
                                     <td><input type="text" class="form-control form-control-sm" v-model="item.name" placeholder="列表显示名"></td>
                                     <td><input type="text" class="form-control form-control-sm" v-model="item.logo" placeholder="http://..."></td>
                                     <td><input type="text" class="form-control form-control-sm" v-model="item.url"></td>
-                                    <td>
+                                    <td class="text-center">
                                         <button class="btn btn-sm btn-outline-danger border-0" @click="removeChannel(index)">✖</button>
-                                        <button class="btn btn-sm btn-outline-secondary border-0" @click="moveUp(index)" :disabled="index===0">↑</button>
                                     </td>
                                 </tr>
                             </tbody>
