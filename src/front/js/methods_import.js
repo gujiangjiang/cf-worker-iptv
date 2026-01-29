@@ -15,6 +15,11 @@ export const importMethods = `
         return s.replace(/[-_\\s\\.]/g, '');
     },
 
+    /**
+     * 频道名称清洗 (用于去重 Key 生成，以及新频道自动命名)
+     * 修复：不再去除 "测试/修复" 等关键词，避免不同频道撞车
+     * 修复：只去除带空格的 4K/8K，保留 CCTV16-4K 或 8K测试
+     */
     cleanChannelName(name) {
         if (!name) return '';
         let s = name.toUpperCase();
@@ -22,31 +27,27 @@ export const importMethods = `
         // 1. 去除 "默认" 前缀
         s = s.replace(/^默认/, '');
 
-        // 2. 去除括号及内容 (支持全角/半角，如 [IPV6], (4K), （备用）)
-        s = s.replace(/[\\［\\［\\(\\[\\（].*?[\\］\\］\\)\\]\\）]/g, ''); // 简单防全角符
+        // 2. 去除括号及内容 (支持全角/半角)
+        s = s.replace(/[\\［\\［\\(\\[\\（].*?[\\］\\］\\)\\]\\）]/g, ''); 
 
-        // 3. 增强的码率/分辨率清洗
-        // 匹配：Max16M1080, 18M2160, 8M1080HEVC, 7.5M
+        // 3. 码率/分辨率/编码清洗 (如 12M2160, 8M1080HEVC)
+        // 使用非捕获组，确保只匹配作为后缀或独立部分的参数
         s = s.replace(/(?:[\\s-_]|^)(?:MAX)?\\d+(?:\\.\\d+)?M(?:\\d+)?(?:HDR|HEVC|H\\.26[45])?/g, '');
         
-        // 匹配：1920x1080, 1920*1080
+        // 4. 纯分辨率清洗 (如 1920x1080, 1080P)
         s = s.replace(/\\s+\\d{3,4}[\\*x]\\d{3,4}/g, '');
-        
-        // 匹配：单独的分辨率数字 (576, 720, 1080, 2160, 4320, 8192) 可能带 i/p
-        // 使用非捕获组确保不是频道名的一部分 (如 CCTV5, CCTV1)
-        // 逻辑：前面必须是分隔符或开头
         s = s.replace(/(?:[\\s-_]|^)(?:576|720|1080|1440|2160|4320|8192)[IP]?/g, '');
         
-        // 匹配：4K, 8K (注意 -4K 的情况)
-        s = s.replace(/(?:[\\s-_]|^)-?(4K|8K)/g, '');
+        // 5. 4K/8K 清洗 (关键修改：只去除前面有空格的，保留 CCTV16-4K, 8K测试)
+        s = s.replace(/\\s+(4K|8K)(?:\\b|$)/g, '');
 
-        // 匹配：技术参数后缀
+        // 6. 技术参数后缀 (FHD, HDR, HEVC...)
         s = s.replace(/(?:[\\s-_]|^)(F?HD|SD|HEVC|HDR|H\\.26[45]|FPS\\d+)/g, ''); 
         
-        // 4. 去除无意义的修饰词
-        s = s.replace(/(?:测试|希流|专享|蓝光|纯享|修复|频道)/g, '');
-
-        // 5. 最后去除特殊字符，只保留核心名称
+        // 7. 移除 "测试/修复/频道" 等词的逻辑已删除，防止过度清洗导致撞车
+        // 比如 "4K修复" 和 "8K测试" 如果去掉了关键字和分辨率，可能都变成空或特殊字符
+        
+        // 8. 去除首尾空白及特殊字符，只保留核心名称
         return s.replace(/[-_\\s]/g, ''); 
     },
 
@@ -204,7 +205,12 @@ export const importMethods = `
         
         rawChannels.forEach(ch => {
             ch = this.standardizeChannel(ch); 
-            const key = this.cleanChannelName(ch.name); // 使用增强后的清洗逻辑作为 key
+            
+            // 关键修改：预先获取清洗后的名称
+            // 注意：清洗后的名称可能为空(极端情况)，如果为空则回退到原名
+            const cleanedNameRaw = this.cleanChannelName(ch.name);
+            const key = cleanedNameRaw || this.normalizeName(ch.name); 
+
             if (!key) { uniqueNewChannels.push(ch); return; }
             
             if (tempMap.has(key)) {
@@ -212,6 +218,27 @@ export const importMethods = `
                 uniqueNewChannels[existingIndex].sources.push(...ch.sources);
                 internalMergeCount++;
             } else {
+                // 如果是新频道，自动应用清洗后的名称 (如: "SiTV欢笑剧场 12M2160" -> "SiTV欢笑剧场")
+                if (cleanedNameRaw && cleanedNameRaw !== ch.name.replace(/[-_\\s]/g, '')) {
+                     // 这里做一个简单的判断，如果 cleanedNameRaw 是 ch.name 的一部分（去除了冗余），则应用
+                     // 由于 cleanChannelName 返回的是去除所有特殊字符的纯文本，我们需要小心赋值
+                     // 简单做法：如果清洗逻辑判定它是冗余后缀，我们这里可以尝试还原一个好看的显示名
+                     // 但为了稳妥，我们使用正则替换后的逻辑来生成显示名
+                     
+                     // 重新执行一遍非破坏性的替换来获取显示名（保留中文间的字符，仅去除后缀）
+                     let prettyName = ch.name;
+                     prettyName = prettyName.replace(/^默认/, '');
+                     prettyName = prettyName.replace(/[\\［\\［\\(\\[\\（].*?[\\］\\］\\)\\]\\）]/g, '');
+                     prettyName = prettyName.replace(/(?:[\\s-_]|^)(?:MAX)?\\d+(?:\\.\\d+)?M(?:\\d+)?(?:HDR|HEVC|H\\.26[45])?/g, '');
+                     prettyName = prettyName.replace(/\\s+\\d{3,4}[\\*x]\\d{3,4}/g, '');
+                     prettyName = prettyName.replace(/(?:[\\s-_]|^)(?:576|720|1080|1440|2160|4320|8192)[IP]?/g, '');
+                     prettyName = prettyName.replace(/\\s+(4K|8K)(?:\\b|$)/g, ''); // 仅去除带空格的4K
+                     prettyName = prettyName.replace(/(?:[\\s-_]|^)(F?HD|SD|HEVC|HDR|H\\.26[45]|FPS\\d+)/g, '');
+                     prettyName = prettyName.trim();
+                     
+                     if(prettyName) ch.name = prettyName;
+                }
+
                 tempMap.set(key, uniqueNewChannels.length);
                 uniqueNewChannels.push(ch);
             }
@@ -221,7 +248,7 @@ export const importMethods = `
 
         const existingMap = new Map(); 
         this.channels.forEach((ch, index) => {
-            const key = this.cleanChannelName(ch.name); // 使用相同的清洗逻辑
+            const key = this.cleanChannelName(ch.name); 
             if(key) existingMap.set(key, { index, id: ch.id });
         });
 
@@ -229,12 +256,13 @@ export const importMethods = `
         const safeToAdd = []; 
 
         uniqueNewChannels.forEach(newCh => {
-            const newKey = this.cleanChannelName(newCh.name);
-            const cleanNewKey = this.cleanChannelName(newCh.name); // 现在 key 和 cleanKey 是一样的增强逻辑
+            // key 和 cleanKey 逻辑一致
+            const keyRaw = this.cleanChannelName(newCh.name);
+            const key = keyRaw || this.normalizeName(newCh.name);
 
             // A. 完全匹配检测
-            if (existingMap.has(newKey)) {
-                const { index: existingIndex, id: existingId } = existingMap.get(newKey);
+            if (existingMap.has(key)) {
+                const { index: existingIndex, id: existingId } = existingMap.get(key);
                 const existingChannel = this.channels[existingIndex];
                 
                 const existingUrls = new Set(existingChannel.sources.map(s => s.url));
@@ -256,11 +284,15 @@ export const importMethods = `
             // B. 模糊/疑似匹配检测
             let fuzzyTarget = null;
             
-            // 由于 cleanChannelName 已经非常强力，这里再做一层基于包含关系的检测
+            // 使用 key (cleanChannelName) 进行包含检测
+            const cleanNewKey = key;
+            
             const cleanKeyMatchIndex = this.channels.findIndex(ch => {
                 const existingClean = this.cleanChannelName(ch.name);
+                if (!existingClean) return false;
+                
                 if (existingClean === cleanNewKey) return true;
-                if (cleanNewKey.length <= 1 || existingClean.length <= 1) return false; // 防止太短的误判
+                if (cleanNewKey.length <= 1 || existingClean.length <= 1) return false; 
 
                 let longStr, shortStr;
                 if (existingClean.includes(cleanNewKey)) {
