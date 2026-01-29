@@ -22,60 +22,111 @@ jobs:
         with:
           node-version: '20'
 
-      # 3. 第一步：检测 Cloudflare 秘钥
-      - name: Check Cloudflare Secrets
+      # 3. 统一检测所有凭证 (CF 密钥 + 密码)
+      - name: Check Credentials & Generate Report
+        id: check_creds
         run: |
-          if [ -z "${{ secrets.CF_API_TOKEN }}" ]; then
-            echo "::error::Missing CF_API_TOKEN secret. Please add it in GitHub Settings."
-            exit 1
+          # 初始化状态变量
+          MISSING_CF=false
+          MISSING_PWD=false
+          
+          # 检查 CF 密钥
+          if [ -z "${{ secrets.CF_API_TOKEN }}" ] || [ -z "${{ secrets.CF_ACCOUNT_ID }}" ]; then
+            MISSING_CF=true
           fi
-          if [ -z "${{ secrets.CF_ACCOUNT_ID }}" ]; then
-            echo "::error::Missing CF_ACCOUNT_ID secret. Please add it in GitHub Settings."
-            exit 1
-          fi
-          echo "Cloudflare credentials detected."
-
-      # 4. 第二步：检测必填项 PASSWORD
-      - name: Check Password Secret
-        run: |
+          
+          # 检查密码
           if [ -z "${{ secrets.PASSWORD }}" ]; then
-            echo "::error::Missing PASSWORD secret. Please add it in GitHub Settings."
-            exit 1
+            MISSING_PWD=true
           fi
-          echo "User password detected."
 
-      # 5. 第三步：自动创建 KV 存储库并关联 (含配置文件注入)
+          # --- 场景 1: 缺少 CF 密钥 (跳过部署) ---
+          if [ "$MISSING_CF" = true ]; then
+            echo "::warning::Cloudflare credentials missing. Deployment skipped."
+            
+            echo "## 🛑 部署已跳过 (Deployment Skipped)" >> $GITHUB_STEP_SUMMARY
+            echo "缺少 Cloudflare 认证密钥，工作流已跳过。" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "| Secret | Status |" >> $GITHUB_STEP_SUMMARY
+            echo "| --- | --- |" >> $GITHUB_STEP_SUMMARY
+            
+            if [ -z "${{ secrets.CF_API_TOKEN }}" ]; then
+              echo "| CF_API_TOKEN | ❌ Missing |" >> $GITHUB_STEP_SUMMARY
+            else
+               echo "| CF_API_TOKEN | ✅ Found |" >> $GITHUB_STEP_SUMMARY
+            fi
+
+            if [ -z "${{ secrets.CF_ACCOUNT_ID }}" ]; then
+              echo "| CF_ACCOUNT_ID | ❌ Missing |" >> $GITHUB_STEP_SUMMARY
+            else
+               echo "| CF_ACCOUNT_ID | ✅ Found |" >> $GITHUB_STEP_SUMMARY
+            fi
+            
+            echo "should_deploy=false" >> $GITHUB_ENV
+            exit 0 # 结束当前 step，不报错
+          fi
+
+          # --- 场景 2: CF 密钥存在，但缺少 PASSWORD (跳过部署) ---
+          if [ "$MISSING_PWD" = true ]; then
+            echo "::warning::PASSWORD secret missing. Deployment skipped."
+            
+            echo "## ⚠️ 部署已取消 (Deployment Cancelled)" >> $GITHUB_STEP_SUMMARY
+            echo "检测到 Cloudflare 密钥，但缺少后台管理密码 (PASSWORD)。" >> $GITHUB_STEP_SUMMARY
+            echo "请在 Settings -> Secrets 中添加 'PASSWORD'。" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "| Secret | Status |" >> $GITHUB_STEP_SUMMARY
+            echo "| --- | --- |" >> $GITHUB_STEP_SUMMARY
+            echo "| CF Credentials | ✅ Found |" >> $GITHUB_STEP_SUMMARY
+            echo "| PASSWORD | ❌ Missing |" >> $GITHUB_STEP_SUMMARY
+            
+            echo "should_deploy=false" >> $GITHUB_ENV
+            exit 0
+          fi
+
+          # --- 场景 3: 一切就绪 ---
+          echo "All credentials found."
+          echo "should_deploy=true" >> $GITHUB_ENV
+
+      # 4. 自动创建 KV 存储库并关联 (仅当 should_deploy 为 true 时执行)
+      # 修复：使用 curl 直接调用 API 替代 wrangler CLI，避免版本和参数解析错误
       - name: Auto Configure KV & Inject Secrets
+        if: env.should_deploy == 'true'
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
           USER_PASSWORD: ${{ secrets.PASSWORD }}
         run: |
-          # 安装 wrangler 用于 KV 管理操作
-          npm install -g wrangler
-
-          echo "🔍 Checking KV Namespace 'IPTV_KV'..."
+          # 定义 API 基础变量
+          API_URL="https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/storage/kv/namespaces"
+          AUTH_HEADER="Authorization: Bearer ${CLOUDFLARE_API_TOKEN}"
           
-          # 获取当前的 KV 列表
-          EXISTING_KV=$(npx wrangler kv:namespace list)
+          echo "🔍 Checking for existing KV Namespace 'IPTV_KV'..."
           
-          # 使用 jq 查找名为 IPTV_KV 的 ID
-          KV_ID=$(echo "$EXISTING_KV" | jq -r '.[] | select(.title == "IPTV_KV") | .id')
+          # 直接通过 API 获取 KV 列表 (每页 100 条以确保能找到)
+          RESPONSE=$(curl -s -X GET "$API_URL?per_page=100" \
+            -H "$AUTH_HEADER" \
+            -H "Content-Type: application/json")
+          
+          # 使用 jq 解析 JSON 查找 ID
+          KV_ID=$(echo "$RESPONSE" | jq -r '.result[] | select(.title == "IPTV_KV") | .id')
           
           if [ -z "$KV_ID" ] || [ "$KV_ID" == "null" ]; then
             echo "⚠️ KV Namespace 'IPTV_KV' not found. Creating..."
             # 创建新的 Namespace
-            npx wrangler kv:namespace create IPTV_KV
-            # 重新获取 ID 以确保准确
-            KV_ID=$(npx wrangler kv:namespace list | jq -r '.[] | select(.title == "IPTV_KV") | .id')
+            CREATE_RES=$(curl -s -X POST "$API_URL" \
+              -H "$AUTH_HEADER" \
+              -H "Content-Type: application/json" \
+              --data '{"title": "IPTV_KV"}')
+            
+            KV_ID=$(echo "$CREATE_RES" | jq -r '.result.id')
+            
+            if [ -z "$KV_ID" ] || [ "$KV_ID" == "null" ]; then
+              echo "::error::Failed to retrieve or create KV ID. API Response: $CREATE_RES"
+              exit 1
+            fi
             echo "✅ Created new KV Namespace with ID: $KV_ID"
           else
             echo "✅ Found existing KV Namespace ID: $KV_ID"
-          fi
-          
-          if [ -z "$KV_ID" ] || [ "$KV_ID" == "null" ]; then
-            echo "::error::Failed to retrieve or create KV ID."
-            exit 1
           fi
 
           echo "⚙️ Updating wrangler.toml..."
@@ -88,11 +139,10 @@ jobs:
           sed -i 's/PASSWORD = ".*"/PASSWORD = "'"$USER_PASSWORD"'"/' wrangler.toml
           
           echo "Configuration updated successfully."
-          # 验证替换结果 (为了安全不打印密码行)
-          grep "id =" wrangler.toml
 
-      # 6. 执行部署
+      # 5. 执行部署 (仅当 should_deploy 为 true 时执行)
       - name: Deploy to Cloudflare Workers
+        if: env.should_deploy == 'true'
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CF_API_TOKEN }}

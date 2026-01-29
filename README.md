@@ -1,7 +1,7 @@
 # 📺 Cloudflare Worker IPTV Manager
 
-[![Deploy to Cloudflare Workers](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/gujiangjiang/cf-worker-iptv)
-[![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Deploy to Cloudflare Workers](https://img.shields.io/badge/Deploy%20to-Cloudflare%20Workers-orange?logo=cloudflare&style=for-the-badge)](https://workers.cloudflare.com/)
+[![License](https://img.shields.io/badge/License-MIT-blue.svg?style=for-the-badge)](LICENSE)
 
 一个基于 Cloudflare Workers 和 KV Storage 的轻量级 IPTV 直播源管理平台。
 
