@@ -76,7 +76,7 @@ export const uiMethods = `
             group: this.groups.length > 0 ? this.groups[0] : '默认',
             name: '', tvgName: '',
             useLogo: false, logo: '',
-            sources: [{ url: '', enabled: true, isPrimary: true }]
+            sources: [] // 默认不添加源，需手动点击添加
         };
         this.logoPreviewUrl = '';
         this.modals.channelEditor = true;

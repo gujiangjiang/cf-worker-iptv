@@ -24,7 +24,11 @@ export const cssContent = `
 
     /* Logo 预览框 */
     .logo-preview-box {
-        width: 40px; height: 38px;
+        height: 38px;
+        width: auto;
+        min-width: 40px;
+        max-width: 120px;
+        padding: 0 5px;
         background-color: #f8f9fa;
         border: 1px solid #ced4da;
         border-radius: 4px;

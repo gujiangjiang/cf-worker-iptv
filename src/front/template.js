@@ -66,6 +66,9 @@ export const html = `
                                 <span>📡 直播源列表 (拖拽排序)</span>
                                 <button class="btn btn-sm btn-outline-primary" @click="addSource">+ 添加源</button>
                             </label>
+                            <div class="form-text mb-2 text-muted small">
+                                复选框为启用对应直播源，单选框为在启用的直播源中选择一个默认的直播源
+                            </div>
                             <div class="list-group" id="source-list-container">
                                 <div v-for="(source, idx) in channelForm.sources" :key="idx" class="list-group-item source-row d-flex align-items-center gap-2">
                                     <span class="source-drag-handle text-secondary fs-5">⠿</span>
@@ -75,13 +78,12 @@ export const html = `
                                     <input type="text" class="form-control form-control-sm" v-model="source.url" :disabled="!source.enabled" placeholder="http://...">
                                     <div class="form-check" title="设为 M3U 主源">
                                         <input class="form-check-input" type="radio" :checked="source.isPrimary" @click="setPrimarySource(idx)" :disabled="!source.enabled">
-                                        <label class="form-check-label small text-muted" v-if="source.isPrimary">主源</label>
                                     </div>
                                     <button class="btn btn-sm btn-outline-danger border-0" @click="removeSource(idx)">✖</button>
                                 </div>
                             </div>
                             <div v-if="channelForm.sources.length === 0" class="text-center text-muted py-3 border rounded border-dashed">
-                                暂无直播源，请添加
+                                暂无直播源，请点击上方按钮添加
                             </div>
                         </div>
                     </div>
