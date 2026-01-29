@@ -30,7 +30,7 @@ export async function handleSave(request, env) {
     }
 }
 
-// 获取全局配置 (EPG, Catchup 等)
+// 获取全局配置
 export async function handleGetSettings(request, env) {
     if (!checkAuth(request, env)) return errorResponse("Unauthorized", 401);
     try {
@@ -53,7 +53,31 @@ export async function handleSaveSettings(request, env) {
     }
 }
 
-// 代理获取远程 M3U 内容 (解决前端跨域问题)
+// 获取分组列表 (新增)
+export async function handleGetGroups(request, env) {
+    if (!checkAuth(request, env)) return errorResponse("Unauthorized", 401);
+    try {
+        const data = await env.IPTV_KV.get("groups", { type: "json" });
+        // 如果没有存储过分组，返回空数组，前端会处理默认逻辑
+        return jsonResponse(data || []);
+    } catch (e) {
+        return errorResponse("Internal Server Error", 500);
+    }
+}
+
+// 保存分组列表 (新增)
+export async function handleSaveGroups(request, env) {
+    if (!checkAuth(request, env)) return errorResponse("Unauthorized", 401);
+    try {
+        const body = await request.json();
+        await env.IPTV_KV.put("groups", JSON.stringify(body));
+        return new Response("Groups Saved", { headers: corsHeaders });
+    } catch (e) {
+        return errorResponse("Invalid Data", 400);
+    }
+}
+
+// 代理获取远程 M3U 内容
 export async function handleFetchM3u(request, env) {
     if (!checkAuth(request, env)) return errorResponse("Unauthorized", 401);
     

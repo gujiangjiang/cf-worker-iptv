@@ -7,23 +7,19 @@ export const cssContent = `
     .container { max-width: 1300px; margin-top: 30px; }
     .channel-row input { font-size: 0.9rem; }
     
-    /* 拖拽手柄样式 */
     .drag-handle { cursor: grab; user-select: none; }
     .drag-handle:active { cursor: grabbing; }
     .sortable-ghost { background-color: #e9ecef !important; opacity: 0.5; }
     
-    /* 加载遮罩层 */
     .loading-overlay { 
         position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
         background: rgba(255,255,255,0.8); z-index: 9999; 
         display: flex; justify-content: center; align-items: center; 
     }
     
-    /* Toast 样式 */
     .toast-enter-active, .toast-leave-active { transition: all 0.3s ease; }
     .toast-enter-from, .toast-leave-to { opacity: 0; transform: translateY(-20px); }
     
-    /* 浮动保存按钮 */
     .floating-save-btn {
         width: 60px; height: 60px; font-size: 26px; border-radius: 50%;
         box-shadow: 0 4px 15px rgba(0,0,0,0.3); z-index: 1030;
@@ -33,12 +29,13 @@ export const cssContent = `
     .floating-save-btn:hover { transform: scale(1.1) translateY(-2px); box-shadow: 0 6px 20px rgba(0,0,0,0.4); }
     .floating-save-btn:active { transform: scale(0.95); }
 
-    /* 冲突解决模态框样式 */
+    /* 通用模态框遮罩 */
     .modal-overlay {
         position: fixed; top: 0; left: 0; width: 100%; height: 100%;
         background: rgba(0,0,0,0.5); z-index: 1060;
         display: flex; align-items: center; justify-content: center;
     }
+    /* 冲突解决卡片专用 */
     .conflict-card {
         background: white; width: 600px; max-width: 90%;
         border-radius: 8px; box-shadow: 0 10px 30px rgba(0,0,0,0.2);

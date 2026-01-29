@@ -31,7 +31,7 @@ export default {
             return api.handleList(request, env);
 
         case "/api/save":
-            // API: 保存频道列表 (仅 POST)
+            // API: 保存频道列表
             if (request.method === "POST") {
                 return api.handleSave(request, env);
             }
@@ -44,8 +44,15 @@ export default {
             }
             return api.handleGetSettings(request, env);
 
+        case "/api/groups":
+            // API: 获取/保存分组列表 (新增)
+            if (request.method === "POST") {
+                return api.handleSaveGroups(request, env);
+            }
+            return api.handleGetGroups(request, env);
+
         case "/api/fetch-m3u":
-            // API: 远程抓取 M3U (仅 POST)
+            // API: 远程抓取 M3U
             if (request.method === "POST") {
                 return api.handleFetchM3u(request, env);
             }

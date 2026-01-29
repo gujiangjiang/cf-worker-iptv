@@ -6,9 +6,11 @@ export const apiMethods = `
     async login() {
         this.loading = true;
         try {
-            const [listRes, settingsRes] = await Promise.all([
+            // 并行请求：列表、设置、分组
+            const [listRes, settingsRes, groupsRes] = await Promise.all([
                 fetch('/api/list', { headers: { 'Authorization': this.password } }),
-                fetch('/api/settings', { headers: { 'Authorization': this.password } })
+                fetch('/api/settings', { headers: { 'Authorization': this.password } }),
+                fetch('/api/groups', { headers: { 'Authorization': this.password } })
             ]);
 
             if(listRes.status === 401) {
@@ -16,15 +18,22 @@ export const apiMethods = `
                 localStorage.removeItem('iptv_pwd');
             } else {
                 const rawList = await listRes.json();
-                // 数据标准化处理
                 this.channels = rawList.map(this.standardizeChannel);
 
                 const remoteSettings = await settingsRes.json();
                 this.settings = { ...this.settings, ...remoteSettings };
+                
+                // 加载分组，如果没有，则从频道列表中提取
+                let remoteGroups = await groupsRes.json();
+                if (!remoteGroups || remoteGroups.length === 0) {
+                    const extracted = new Set(this.channels.map(c => c.group || '默认'));
+                    remoteGroups = Array.from(extracted);
+                }
+                this.groups = remoteGroups;
+
                 this.isAuth = true;
                 localStorage.setItem('iptv_pwd', this.password);
                 
-                // DOM 渲染后初始化拖拽
                 this.$nextTick(() => { this.initSortable(); });
             }
         } catch(e) {
@@ -61,11 +70,11 @@ export const apiMethods = `
         this.loading = false;
     },
 
-    // 保存所有数据
+    // 保存所有数据 (列表 + 设置 + 分组)
     async saveData() {
         this.loading = true;
         try {
-            const [resList, resSettings] = await Promise.all([
+            const [resList, resSettings, resGroups] = await Promise.all([
                 fetch('/api/save', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'Authorization': this.password },
@@ -75,10 +84,15 @@ export const apiMethods = `
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'Authorization': this.password },
                     body: JSON.stringify(this.settings)
+                }),
+                fetch('/api/groups', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': this.password },
+                    body: JSON.stringify(this.groups)
                 })
             ]);
 
-            if(resList.ok && resSettings.ok) this.showToast('保存成功！', 'success');
+            if(resList.ok && resSettings.ok && resGroups.ok) this.showToast('保存成功！', 'success');
             else this.showToast('保存失败', 'error');
         } catch(e) {
             this.showToast('保存请求出错', 'error');
@@ -86,13 +100,11 @@ export const apiMethods = `
         this.loading = false;
     },
 
-    // 基础操作
-    addChannel() {
-        this.channels.unshift({ name: '新频道', tvgName: '新频道', group: '默认', logo: '', urls: [''] });
-    },
+    // 移除频道
     removeChannel(index) {
         this.channels.splice(index, 1);
     },
+    // 清空列表
     clearAll() {
         if(confirm('确定要清空所有频道吗？')) {
             this.channels = [];

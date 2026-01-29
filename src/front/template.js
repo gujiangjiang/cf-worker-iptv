@@ -30,38 +30,25 @@ export const html = `
                 </div>
                 <div class="conflict-body">
                     <p class="mb-2 text-muted small">系统检测到频道名称相似，请选择处理方式：</p>
-                    
                     <div class="form-check mb-2">
-                        <input class="form-check-input" type="radio" name="conflictAction" id="actionKeepOld" value="old" v-model="conflictModal.action">
-                        <label class="form-check-label" for="actionKeepOld">
-                            <strong>仅保留旧版</strong> (丢弃新导入的源)
-                        </label>
+                        <input class="form-check-input" type="radio" value="old" v-model="conflictModal.action">
+                        <label class="form-check-label">仅保留旧版 (丢弃新导入)</label>
                     </div>
-
                     <div class="form-check mb-2">
-                        <input class="form-check-input" type="radio" name="conflictAction" id="actionKeepNew" value="new" v-model="conflictModal.action">
-                        <label class="form-check-label" for="actionKeepNew">
-                            <strong>仅保留新版</strong> (覆盖现有的源)
-                        </label>
+                        <input class="form-check-input" type="radio" value="new" v-model="conflictModal.action">
+                        <label class="form-check-label">仅保留新版 (覆盖现有)</label>
                     </div>
-
                     <div class="form-check mb-3">
-                        <input class="form-check-input" type="radio" name="conflictAction" id="actionMerge" value="merge" v-model="conflictModal.action">
-                        <label class="form-check-label" for="actionMerge">
-                            <strong>合并保留 (推荐)</strong> - 请在下方选择 M3U 使用的<b>主要源</b>：
-                        </label>
+                        <input class="form-check-input" type="radio" value="merge" v-model="conflictModal.action">
+                        <label class="form-check-label">合并保留 (推荐) - 选择主要源：</label>
                     </div>
-
                     <div v-if="conflictModal.action === 'merge'" class="source-list">
                         <div class="source-item" v-for="(url, idx) in conflictModal.mergedUrls" :key="idx" @click="conflictModal.selectedPrimary = url">
                             <input type="radio" :checked="conflictModal.selectedPrimary === url" name="primaryUrl">
                             <span class="text-truncate">{{ url }}</span>
-                            <span :class="['badge-src', isUrlFromOld(url) ? 'badge-old' : 'badge-new']">
-                                {{ isUrlFromOld(url) ? '现有' : '新导入' }}
-                            </span>
+                            <span :class="['badge-src', isUrlFromOld(url) ? 'badge-old' : 'badge-new']">{{ isUrlFromOld(url) ? '现有' : '新导入' }}</span>
                         </div>
                     </div>
-
                     <div class="d-flex justify-content-end mt-4">
                         <button class="btn btn-outline-secondary me-2" @click="resolveAllConflicts">按此规则处理所有</button>
                         <button class="btn btn-primary" @click="resolveConflict">确认处理</button>
@@ -70,13 +57,112 @@ export const html = `
             </div>
         </div>
 
-        <div class="toast-container position-fixed top-0 start-50 translate-middle-x p-3" style="z-index: 1050">
-            <div :class="['toast', 'align-items-center', 'text-white', 'border-0', toastClass, toast.show ? 'show' : '']" role="alert" aria-live="assertive" aria-atomic="true">
-                <div class="d-flex">
-                    <div class="toast-body fs-6">
-                        {{ toast.message }}
+        <div v-if="modals.settings" class="modal-overlay" @click.self="modals.settings = false">
+            <div class="modal-dialog modal-lg" style="pointer-events: auto">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">⚙️ 全局设置</h5>
+                        <button type="button" class="btn-close" @click="modals.settings = false"></button>
                     </div>
-                    <button type="button" class="btn-close btn-close-white me-2 m-auto" @click="toast.show = false" aria-label="Close"></button>
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label class="form-label">EPG XML 地址 (x-tvg-url)</label>
+                            <input type="text" class="form-control" v-model="settings.epgUrl" placeholder="https://...">
+                        </div>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label">回看模式 (catchup)</label>
+                                <select class="form-select" v-model="settings.catchup">
+                                    <option value="">未设置 (None)</option>
+                                    <option value="append">append (追加)</option>
+                                    <option value="default">default (默认)</option>
+                                    <option value="shift">shift (平移)</option>
+                                    <option value="flussonic">flussonic</option>
+                                    <option value="fs">fs</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">回看源规则 (catchup-source)</label>
+                                <input type="text" class="form-control" v-model="settings.catchupSource" list="catchupSourceOptions">
+                                <datalist id="catchupSourceOptions">
+                                    <option value="?playseek=\${(b)yyyyMMddHHmmss}-\${(e)yyyyMMddHHmmss}">通用追加格式</option>
+                                    <option value="?playseek=\${(b)timestamp}-\${(e)timestamp}">通用时间戳格式</option>
+                                </datalist>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn btn-primary" @click="modals.settings = false">完成</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div v-if="modals.addChannel" class="modal-overlay" @click.self="modals.addChannel = false">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">➕ 新增频道</h5>
+                        <button type="button" class="btn-close" @click="modals.addChannel = false"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label class="form-label">分组</label>
+                            <select class="form-select" v-model="newChannelForm.group">
+                                <option v-for="g in groups" :key="g" :value="g">{{ g }}</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">频道名称</label>
+                            <input type="text" class="form-control" v-model="newChannelForm.name">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Logo URL</label>
+                            <input type="text" class="form-control" v-model="newChannelForm.logo">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">直播源地址</label>
+                            <input type="text" class="form-control" v-model="newChannelForm.url">
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn btn-primary" @click="confirmAddChannel">添加</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div v-if="modals.groupManager" class="modal-overlay" @click.self="modals.groupManager = false">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">📁 分组管理</h5>
+                        <button type="button" class="btn-close" @click="modals.groupManager = false"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="input-group mb-3">
+                            <input type="text" class="form-control" v-model="newGroupInput" placeholder="输入新分组名称" @keyup.enter="addGroup">
+                            <button class="btn btn-outline-primary" @click="addGroup">添加</button>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                             <small class="text-muted">已有分组 ({{ groups.length }})</small>
+                             <button class="btn btn-sm btn-link text-decoration-none" @click="syncGroupsFromChannels">从列表同步</button>
+                        </div>
+                        <ul class="list-group" style="max-height: 400px; overflow-y: auto;">
+                            <li class="list-group-item d-flex justify-content-between align-items-center" v-for="(g, idx) in groups" :key="idx">
+                                {{ g }}
+                                <button class="btn btn-sm btn-outline-danger border-0" @click="removeGroup(idx)">✖</button>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="toast-container position-fixed top-0 start-50 translate-middle-x p-3" style="z-index: 1050">
+            <div :class="['toast', 'align-items-center', 'text-white', 'border-0', toastClass, toast.show ? 'show' : '']">
+                <div class="d-flex">
+                    <div class="toast-body fs-6">{{ toast.message }}</div>
                 </div>
             </div>
         </div>
@@ -98,47 +184,16 @@ export const html = `
         </div>
 
         <div v-else>
-            <button class="btn btn-primary floating-save-btn position-fixed bottom-0 end-0 m-4"
-                    @click="saveData"
-                    title="保存所有更改">
-                💾
-            </button>
+            <button class="btn btn-primary floating-save-btn position-fixed bottom-0 end-0 m-4" @click="saveData" title="保存所有更改">💾</button>
 
             <div class="card p-3 mb-4 shadow-sm">
                 <div class="row g-3">
                     <div class="col-12 d-flex justify-content-between align-items-center">
-                         <h5 class="mb-0">数据导入 & 设置</h5>
-                         <button class="btn btn-sm btn-outline-secondary" @click="showSettings = !showSettings">
-                            {{ showSettings ? '收起设置' : '⚙️ 全局设置' }}
-                         </button>
-                    </div>
-                    
-                    <div v-if="showSettings" class="col-12 border-bottom pb-3">
-                        <div class="row g-2">
-                            <div class="col-md-4">
-                                <label class="form-label small text-muted">EPG XML 地址 (x-tvg-url)</label>
-                                <input type="text" class="form-control form-control-sm" v-model="settings.epgUrl" placeholder="https://...">
-                            </div>
-                            <div class="col-md-3">
-                                <label class="form-label small text-muted">回看模式 (catchup)</label>
-                                <select class="form-select form-select-sm" v-model="settings.catchup">
-                                    <option value="">未设置 (None)</option>
-                                    <option value="append">append (追加)</option>
-                                    <option value="default">default (默认)</option>
-                                    <option value="shift">shift (平移)</option>
-                                    <option value="flussonic">flussonic</option>
-                                    <option value="fs">fs</option>
-                                </select>
-                            </div>
-                            <div class="col-md-5">
-                                <label class="form-label small text-muted">回看源规则 (catchup-source)</label>
-                                <input type="text" class="form-control form-control-sm" v-model="settings.catchupSource" list="catchupSourceOptions" placeholder="选择或输入规则...">
-                                <datalist id="catchupSourceOptions">
-                                    <option value="?playseek=\${(b)yyyyMMddHHmmss}-\${(e)yyyyMMddHHmmss}">通用追加格式 (年月日时分秒)</option>
-                                    <option value="?playseek=\${(b)timestamp}-\${(e)timestamp}">通用时间戳格式</option>
-                                </datalist>
-                            </div>
-                        </div>
+                         <h5 class="mb-0">快捷操作</h5>
+                         <div>
+                             <button class="btn btn-sm btn-outline-secondary me-2" @click="modals.groupManager = true">📁 分组管理</button>
+                             <button class="btn btn-sm btn-outline-secondary" @click="modals.settings = true">⚙️ 全局设置</button>
+                         </div>
                     </div>
 
                     <div class="col-md-5">
@@ -154,7 +209,7 @@ export const html = `
                     </div>
                     <div class="col-12 d-flex justify-content-end border-top pt-3 mt-3">
                          <button class="btn btn-danger me-2" @click="clearAll">清空列表</button>
-                         <button class="btn btn-success" @click="saveData">💾 保存所有更改 (列表+配置)</button>
+                         <button class="btn btn-success" @click="saveData">💾 保存所有</button>
                     </div>
                 </div>
             </div>
@@ -162,7 +217,7 @@ export const html = `
             <div class="card shadow-sm">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <span>频道列表 ({{ channels.length }})</span>
-                    <button class="btn btn-sm btn-primary" @click="addChannel">+ 新增频道</button>
+                    <button class="btn btn-sm btn-primary" @click="openAddChannelModal">+ 新增频道</button>
                 </div>
                 <div class="card-body p-0">
                     <div class="table-responsive">
@@ -180,17 +235,19 @@ export const html = `
                             </thead>
                             <tbody id="channel-list">
                                 <tr v-for="(item, index) in channels" :key="index" class="channel-row">
-                                    <td class="text-center cursor-move drag-handle" title="按住拖动排序">
-                                        <span class="text-secondary fs-5">⠿</span>
+                                    <td class="text-center cursor-move drag-handle"><span class="text-secondary fs-5">⠿</span></td>
+                                    <td>
+                                        <select class="form-select form-select-sm" v-model="item.group">
+                                            <option v-for="g in groups" :key="g" :value="g">{{ g }}</option>
+                                        </select>
                                     </td>
-                                    <td><input type="text" class="form-control form-control-sm" v-model="item.group"></td>
-                                    <td><input type="text" class="form-control form-control-sm" v-model="item.tvgName" placeholder="tvg-name"></td>
-                                    <td><input type="text" class="form-control form-control-sm" v-model="item.name" placeholder="列表显示名"></td>
-                                    <td><input type="text" class="form-control form-control-sm" v-model="item.logo" placeholder="http://..."></td>
+                                    <td><input type="text" class="form-control form-control-sm" v-model="item.tvgName"></td>
+                                    <td><input type="text" class="form-control form-control-sm" v-model="item.name"></td>
+                                    <td><input type="text" class="form-control form-control-sm" v-model="item.logo"></td>
                                     <td>
                                         <div class="input-group input-group-sm">
-                                            <input type="text" class="form-control" v-model="item.urls[0]" placeholder="http://...">
-                                            <span v-if="item.urls.length > 1" class="input-group-text bg-warning text-dark" :title="'共 '+item.urls.length+' 个源，导出TXT时会自动合并'">+{{item.urls.length-1}}</span>
+                                            <input type="text" class="form-control" v-model="item.urls[0]">
+                                            <span v-if="item.urls.length > 1" class="input-group-text bg-warning text-dark">+{{item.urls.length-1}}</span>
                                         </div>
                                     </td>
                                     <td class="text-center">
