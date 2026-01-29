@@ -6,22 +6,36 @@ export const importMethods = `
         return Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
     },
 
-    // 标准化名称：去除所有特殊符号，转大写，用于完全匹配
+    // 标准化名称：用于判定“是否为同一个频道”
+    // 逻辑：全角转半角 -> 转大写 -> 去除空格、横杠、下划线、点
+    // 关键点：保留 '+' 号，以区分 CCTV5 和 CCTV5+
     normalizeName(name) {
         if (!name) return '';
-        return name.replace(/[-_\\s]/g, '').toUpperCase();
+        
+        // 1. 全角字符转半角 (例如：ＣＣＴＶ－１ -> CCTV-1)
+        let s = name.replace(/[\\uFF01-\\uFF5E]/g, function(c) { 
+            return String.fromCharCode(c.charCodeAt(0) - 0xFEE0); 
+        }).replace(/\\u3000/g, ' ');
+        
+        // 2. 转大写
+        s = s.toUpperCase();
+        
+        // 3. 去除干扰字符：空格、横杠(-)、下划线(_)、点(.)
+        // 注意：正则表达式不包含 '+'，所以 CCTV5+ 依然是 CCTV5+，不会变成 CCTV5
+        return s.replace(/[-_\\s\\.]/g, '');
     },
 
-    // 清洗名称：去除常见的后缀（分辨率、码率、特殊标记），保留核心名称，用于模糊匹配
+    // 清洗名称：去除常见的后缀（分辨率、码率、特殊标记），用于“疑似重复”的模糊匹配
     cleanChannelName(name) {
         if (!name) return '';
         let s = name.toUpperCase();
+        // 去除常见的后缀模式
         s = s.replace(/\\s+\\d+M\\d*/g, ''); // 去除 " 8M", " 8M1080"
         s = s.replace(/\\s+\\d+K/g, '');     // 去除 " 4K", " 8K"
         s = s.replace(/\\s+(F?HD|SD|HEVC|HDR)/g, ''); // 去除 HD, FHD, HDR
         s = s.replace(/[\\[\\(].*?[\\]\\)]/g, ''); // 去除括号内容 [xxx] (xxx)
         s = s.replace(/测试/g, '');
-        return s.replace(/[-_\\s]/g, ''); // 最后去除剩余符号和空格
+        return s.replace(/[-_\\s]/g, ''); 
     },
 
     standardizeChannel(ch) {
@@ -161,7 +175,7 @@ export const importMethods = `
 
     processImports(rawChannels) {
         let internalMergeCount = 0;
-        let skippedDuplicateCount = 0; // 新增：统计完全包含被跳过的数量
+        let skippedDuplicateCount = 0; 
         
         // 0. 提取新分组
         const newGroups = new Set(this.groups);
@@ -174,14 +188,15 @@ export const importMethods = `
         });
         if(groupsAdded > 0) this.groups = Array.from(newGroups);
 
-        // 1. 内部去重 (完全同名直接合并)
+        // 1. 导入数据内部去重
         const uniqueNewChannels = [];
         const tempMap = new Map();
         
         rawChannels.forEach(ch => {
             ch = this.standardizeChannel(ch); 
-            const key = this.normalizeName(ch.name);
+            const key = this.normalizeName(ch.name); // 使用标准化名称作为 Key
             if (!key) { uniqueNewChannels.push(ch); return; }
+            
             if (tempMap.has(key)) {
                 const existingIndex = tempMap.get(key);
                 const existingCh = uniqueNewChannels[existingIndex];
@@ -198,34 +213,36 @@ export const importMethods = `
         // 2. 构建现有频道映射表
         const existingMap = new Map(); 
         this.channels.forEach((ch, index) => {
-            const key = this.normalizeName(ch.name);
+            const key = this.normalizeName(ch.name); // 使用同样的标准化逻辑
             if(key) existingMap.set(key, index);
         });
 
-        const conflicts = []; // 待处理的冲突队列
-        const safeToAdd = []; // 可以直接添加的频道
+        const conflicts = []; 
+        const safeToAdd = []; 
 
         uniqueNewChannels.forEach(newCh => {
             const newKey = this.normalizeName(newCh.name);
             const cleanNewKey = this.cleanChannelName(newCh.name);
 
-            // A. 完全匹配检测
+            // A. 完全匹配检测 (标准化名称一致即视为同一个频道)
+            // 例如: "CCTV-1" 和 "CCTV 1" -> 都会变成 "CCTV1"，进入此逻辑
             if (existingMap.has(newKey)) {
                 const existingIndex = existingMap.get(newKey);
                 const existingChannel = this.channels[existingIndex];
                 
-                // --- 新增逻辑：检测是否为完全子集 ---
+                // --- 核心逻辑：源包含检测 ---
                 // 获取现有频道的所有 URL 集合
                 const existingUrls = new Set(existingChannel.sources.map(s => s.url));
                 
-                // 检查新导入的所有源是否都已经存在
+                // 检查：新导入的所有源，是否都已经存在于老频道中？
+                // 只要新导入的源中，有一个是新的(existingUrls里没有)，isSubset 就是 false
                 const isSubset = newCh.sources.every(s => existingUrls.has(s.url));
 
                 if (isSubset) {
-                    // 如果所有新源都已经在老源里了，直接跳过，不需要用户确认
+                    // 如果新源是老源的子集（完全包含），则视为无效更新，直接跳过
                     skippedDuplicateCount++;
                 } else {
-                    // 存在不一样的新源，才弹出冲突
+                    // 存在差异（有新源），弹出冲突供用户决策
                     conflicts.push({
                         newItem: newCh,
                         existingIndex: existingIndex,
@@ -253,8 +270,6 @@ export const importMethods = `
             }
 
             if (fuzzyIndex > -1) {
-                // 模糊匹配同样可以做一步子集检测，如果名字相似且源完全包含，也可以考虑跳过
-                // 但为了安全起见（名字毕竟不一样），模糊匹配建议还是让用户确认一下比较好
                 conflicts.push({
                     newItem: newCh,
                     existingIndex: fuzzyIndex,
@@ -262,7 +277,6 @@ export const importMethods = `
                     suggestedName: this.channels[fuzzyIndex].name
                 });
             } else {
-                // 无冲突，直接添加
                 safeToAdd.push(newCh);
             }
         });
@@ -279,7 +293,7 @@ export const importMethods = `
         } else {
             let msg = \`导入完成，新增 \${safeToAdd.length} 个频道\`;
             if (skippedDuplicateCount > 0) {
-                msg += \`，自动跳过 \${skippedDuplicateCount} 个完全重复项\`;
+                msg += \`，自动跳过 \${skippedDuplicateCount} 个无需更新的重复项\`;
             }
             this.showToast(msg, 'success');
         }
