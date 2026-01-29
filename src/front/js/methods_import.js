@@ -259,5 +259,12 @@ export const importMethods = `
         }
         this.conflictModal.show = false;
         this.showToast('已批量处理所有重复项', 'success');
+    },
+
+    // 新增：取消冲突处理
+    cancelConflict() {
+        this.conflictModal.show = false;
+        this.conflictModal.queue = [];
+        this.showToast('已取消导入', 'info');
     }
 `;

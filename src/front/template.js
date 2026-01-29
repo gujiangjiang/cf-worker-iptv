@@ -200,8 +200,11 @@ export const html = `
         <div v-if="conflictModal.show" class="modal-overlay">
             <div class="conflict-card">
                 <div class="conflict-header">
-                    <span>⚠️ 发现重复频道: {{ conflictModal.currentItem.name }}</span>
-                    <span class="badge bg-danger">剩余: {{ conflictModal.queue.length }}</span>
+                    <div class="d-flex align-items-center gap-2 overflow-hidden">
+                         <span class="text-truncate">⚠️ 发现重复频道: {{ conflictModal.currentItem.name }}</span>
+                         <span class="badge bg-danger flex-shrink-0">剩余: {{ conflictModal.queue.length }}</span>
+                    </div>
+                    <button type="button" class="btn-close ms-2" @click="cancelConflict" aria-label="Close"></button>
                 </div>
                 <div class="conflict-body">
                     <div class="form-check mb-2"><input class="form-check-input" type="radio" value="old" v-model="conflictModal.action"><label class="form-check-label">仅保留旧版</label></div>
