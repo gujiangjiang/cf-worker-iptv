@@ -11,7 +11,6 @@ export const dataContent = `
         epgs: [], 
         catchup: '',
         catchupSource: '',
-        // 新增 subPassword 字段
         subPassword: '', 
         guestConfig: {
             allowViewList: false, 
@@ -27,6 +26,9 @@ export const dataContent = `
     },
 
     catchupMode: 'custom', 
+    
+    // 新增：控制订阅密码输入框的显隐
+    showSubPass: false,
 
     toast: { show: false, message: '', type: 'success' },
     toastTimer: null,

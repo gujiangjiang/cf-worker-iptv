@@ -146,19 +146,8 @@ export const modalTemplate = `
                     <button type="button" class="btn-close" @click="modals.systemSettings = false"></button>
                 </div>
                 <div class="modal-body">
-                    <h6 class="border-bottom pb-2 mb-3">🛡️ 安全与权限</h6>
+                    <h6 class="border-bottom pb-2 mb-3">👤 访客权限控制</h6>
                     
-                    <div class="mb-3">
-                        <label class="form-label">独立订阅密码 (Token)</label>
-                        <div class="input-group">
-                            <input type="text" class="form-control" v-model="settings.subPassword" placeholder="为空则默认使用管理员密码">
-                            <button class="btn btn-outline-secondary" type="button" @click="settings.subPassword = Math.random().toString(36).substring(2, 10)">🎲 生成</button>
-                        </div>
-                        <div class="form-text small text-muted">
-                            设置此密码后，订阅链接将使用该密码，不再暴露管理员密码。
-                        </div>
-                    </div>
-
                     <div class="form-check form-switch mb-3">
                         <input class="form-check-input" type="checkbox" id="allowViewList" v-model="settings.guestConfig.allowViewList">
                         <label class="form-check-label" for="allowViewList">
@@ -166,26 +155,43 @@ export const modalTemplate = `
                         </label>
                     </div>
 
-                    <div class="form-check form-switch mb-3">
-                        <input class="form-check-input" type="checkbox" id="allowSub" v-model="settings.guestConfig.allowSub">
-                        <label class="form-check-label" for="allowSub">
-                            允许访客订阅直播源 (导出)
-                        </label>
-                    </div>
-
-                    <div class="mb-3" v-if="settings.guestConfig.allowSub">
-                        <label class="form-label">允许访客导出的格式</label>
-                        <div class="d-flex gap-3">
-                            <div class="form-check">
-                                <input class="form-check-input" type="checkbox" value="m3u" v-model="settings.guestConfig.allowFormats">
-                                <label class="form-check-label">M3U / 多源</label>
+                    <div class="card p-3 mb-3 bg-light border-0">
+                        <div class="form-check form-switch mb-0">
+                            <input class="form-check-input" type="checkbox" id="allowSub" v-model="settings.guestConfig.allowSub">
+                            <label class="form-check-label fw-bold" for="allowSub">
+                                允许访客订阅直播源 (导出)
+                            </label>
+                        </div>
+                        
+                        <div v-if="!settings.guestConfig.allowSub" class="mt-3 ps-2 border-start border-3 border-primary">
+                            <label class="form-label small text-dark fw-bold">🔐 独立订阅密码 (Token)</label>
+                            <div class="input-group input-group-sm">
+                                <input :type="showSubPass ? 'text' : 'password'" class="form-control" v-model="settings.subPassword" placeholder="为空则默认使用管理员密码">
+                                <button class="btn btn-outline-secondary" type="button" @click="showSubPass = !showSubPass" title="显示/隐藏密码">
+                                    {{ showSubPass ? '🙈' : '👁️' }}
+                                </button>
+                                <button class="btn btn-outline-primary" type="button" @click="generateSubPassword">🎲 生成</button>
                             </div>
-                            <div class="form-check">
-                                <input class="form-check-input" type="checkbox" value="txt" v-model="settings.guestConfig.allowFormats">
-                                <label class="form-check-label">TXT</label>
+                            <div class="form-text small text-muted mt-1">
+                                私有订阅链接将使用此密码进行验证。
+                            </div>
+                        </div>
+
+                        <div v-else class="mt-3 ps-2 border-start border-3 border-success">
+                            <label class="form-label small text-dark fw-bold">允许公开导出的格式</label>
+                            <div class="d-flex gap-3">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" value="m3u" v-model="settings.guestConfig.allowFormats">
+                                    <label class="form-check-label small">M3U / 多源</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" value="txt" v-model="settings.guestConfig.allowFormats">
+                                    <label class="form-check-label small">TXT</label>
+                                </div>
                             </div>
                         </div>
                     </div>
+
                 </div>
                 <div class="modal-footer">
                     <button class="btn btn-primary" @click="saveSystemSettingsAndClose">确定并保存</button>

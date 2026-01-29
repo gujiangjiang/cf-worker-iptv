@@ -14,6 +14,12 @@ export const uiMethods = `
         this.toastTimer = setTimeout(() => { this.toast.show = false; }, 3000);
     },
 
+    // 生成随机订阅密码
+    generateSubPassword() {
+        this.settings.subPassword = Math.random().toString(36).substring(2, 10);
+        this.showSubPass = true; // 生成后自动显示明文以便查看
+    },
+
     initSortable() {
         const el = document.getElementById('channel-list');
         if (!el) return;
@@ -86,14 +92,14 @@ export const uiMethods = `
         this.$nextTick(() => this.initGroupSortable());
     },
     
-    // 打开导入模态框 (新增)
     openImportModal() {
         this.modals.import = true;
-        this.importUrl = ''; // 重置输入框
+        this.importUrl = ''; 
     },
 
     openSystemSettings() {
         this.modals.systemSettings = true;
+        this.showSubPass = false; // 每次打开重置为密文显示
     },
 
     async saveSystemSettingsAndClose() {
