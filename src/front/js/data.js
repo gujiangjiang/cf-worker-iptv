@@ -99,7 +99,8 @@ export const dataContent = `
         matchType: 'exact', 
         suggestedName: '', 
         action: 'merge', 
-        manualTargetIndex: -1, // 新增：手动选择的目标索引
+        manualTargetIndex: -1, // 已废弃，保留兼容，逻辑切换为 manualTargetId
+        manualTargetId: '',    // 新增：使用 ID 绑定手动目标
         mergedUrls: [], 
         selectedPrimary: '' 
     }

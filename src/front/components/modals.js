@@ -46,9 +46,9 @@ export const modalTemplate = `
 
                 <div v-if="conflictModal.action === 'manual'" class="mb-3 ps-4 animate-fade-in">
                     <label class="form-label small text-muted">请选择要归入的目标频道：</label>
-                    <select class="form-select" v-model="conflictModal.manualTargetIndex">
-                        <option :value="-1" disabled>-- 请选择 --</option>
-                        <option v-for="(ch, idx) in channels" :key="ch.id" :value="idx">
+                    <select class="form-select" v-model="conflictModal.manualTargetId">
+                        <option value="" disabled>-- 请选择 --</option>
+                        <option v-for="(ch, idx) in channels" :key="ch.id" :value="ch.id">
                             {{ ch.name }} ({{ ch.group }})
                         </option>
                     </select>
