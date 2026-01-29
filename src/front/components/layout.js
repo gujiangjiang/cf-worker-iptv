@@ -109,8 +109,9 @@ export const layoutTemplate = `
                                 </tr>
 
                                 <tr v-for="(item, index) in channels" :key="item.id" class="channel-row">
-                                    <td :class="['text-center', isAuth ? 'cursor-move drag-handle' : '']">
-                                        <span class="text-secondary">{{ index + 1 }}</span>
+                                    <td class="text-center">
+                                        <span v-if="isAuth" class="drag-handle text-secondary fs-5" title="拖动排序">⠿</span>
+                                        <span v-else class="text-secondary">{{ index + 1 }}</span>
                                     </td>
                                     <td><span class="badge bg-light text-dark border">{{ item.group }}</span></td>
                                     <td class="text-muted small">{{ item.tvgName }}</td>
