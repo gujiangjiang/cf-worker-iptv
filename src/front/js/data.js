@@ -24,9 +24,9 @@ export const dataContent = `
 
     modals: {
         settings: false,
-        channelEditor: false, // 统一使用 channelEditor 模态框
-        groupManager: false
-        groupChannelAdder: false // 新增：批量添加频道模态框
+        channelEditor: false,
+        groupManager: false,         // <--- 这里的逗号必须有
+        groupChannelAdder: false     // 新增：批量添加频道模态框
     },
 
     // 新增：批量添加频道数据状态
