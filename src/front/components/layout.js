@@ -89,18 +89,19 @@ export const layoutTemplate = `
                         <table class="table table-hover mb-0 align-middle">
                             <thead class="table-light">
                                 <tr>
+                                    <th v-if="isAuth" style="width: 5%" class="text-center">排序</th>
                                     <th style="width: 5%" class="text-center">序</th>
                                     <th style="width: 10%">分组</th>
                                     <th style="width: 15%">EPG 名称</th>
                                     <th style="width: 20%">显示名称</th>
                                     <th style="width: 10%">Logo</th>
-                                    <th style="width: 25%">直播源概览</th>
+                                    <th style="width: 20%">直播源概览</th>
                                     <th v-if="isAuth" style="width: 15%" class="text-center">操作</th>
                                 </tr>
                             </thead>
                             <tbody id="channel-list">
                                 <tr v-if="channels.length === 0">
-                                    <td :colspan="isAuth ? 7 : 6" class="text-center py-5 text-muted">
+                                    <td :colspan="isAuth ? 8 : 6" class="text-center py-5 text-muted">
                                         <div class="fs-1 mb-3 opacity-50">📭</div>
                                         <div class="fw-bold">当前暂无可用频道</div>
                                         <div class="small mt-1 opacity-75" v-if="isAuth">请点击右上角“新增频道”或使用导入功能添加数据</div>
@@ -109,9 +110,11 @@ export const layoutTemplate = `
                                 </tr>
 
                                 <tr v-for="(item, index) in channels" :key="item.id" class="channel-row">
+                                    <td v-if="isAuth" class="text-center">
+                                        <span class="drag-handle text-secondary fs-5" title="拖动排序">⠿</span>
+                                    </td>
                                     <td class="text-center">
-                                        <span v-if="isAuth" class="drag-handle text-secondary fs-5" title="拖动排序">⠿</span>
-                                        <span v-else class="text-secondary">{{ index + 1 }}</span>
+                                        <span class="text-secondary">{{ index + 1 }}</span>
                                     </td>
                                     <td><span class="badge bg-light text-dark border">{{ item.group }}</span></td>
                                     <td class="text-muted small">{{ item.tvgName }}</td>
