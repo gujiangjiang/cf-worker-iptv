@@ -14,8 +14,22 @@ export const cssContent = `
     /* 修复：将 Toast 层级提升到最高，超过播放器的 3000 */
     .toast-container { z-index: 9999 !important; }
     
+    /* 保存浮动按钮 */
     .floating-save-btn { width: 60px; height: 60px; font-size: 26px; border-radius: 50%; box-shadow: 0 4px 15px rgba(0,0,0,0.3); z-index: 1030; display: flex; align-items: center; justify-content: center; transition: transform 0.2s; }
     .floating-save-btn:hover { transform: scale(1.1); }
+
+    /* 新增：回到顶部浮动按钮 (位置在保存按钮上方) */
+    .floating-top-btn { 
+        width: 50px; height: 50px; font-size: 20px; 
+        border-radius: 50%; 
+        box-shadow: 0 4px 15px rgba(0,0,0,0.2); 
+        z-index: 1020; 
+        display: flex; align-items: center; justify-content: center; 
+        transition: all 0.3s; 
+        background-color: #fff; color: #6c757d; border: 1px solid #dee2e6;
+        opacity: 0.9;
+    }
+    .floating-top-btn:hover { transform: scale(1.1); background-color: #f8f9fa; color: #0d6efd; opacity: 1; }
 
     /* 模态框美化 */
     .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.5); z-index: 1060; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(3px); }

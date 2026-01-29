@@ -31,6 +31,13 @@ export const jsContent = `
                 // 如果没有保存密码，则初始化访客模式 (拉取配置)
                 this.initGuest();
             }
+
+            // 新增：注册滚动监听事件
+            window.addEventListener('scroll', this.handleScroll);
+        },
+        // 最佳实践：组件卸载时移除监听器
+        unmounted() {
+            window.removeEventListener('scroll', this.handleScroll);
         },
         methods: {
             ${uiMethods},

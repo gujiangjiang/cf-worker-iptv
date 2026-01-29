@@ -27,6 +27,9 @@ export const dataContent = `
 
     catchupMode: 'custom', 
     showSubPass: false,
+    
+    // 新增：控制回到顶部按钮的显示状态
+    showBackToTop: false,
 
     toast: { show: false, message: '', type: 'success' },
     toastTimer: null,

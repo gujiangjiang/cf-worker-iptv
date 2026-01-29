@@ -1,6 +1,6 @@
 /**
  * 基础工具函数
- * 包含: ID生成, Toast提示, 密码生成, 通用网络请求
+ * 包含: ID生成, Toast提示, 密码生成, 通用网络请求, 滚动交互
  */
 export const baseUtils = `
     generateId() {
@@ -18,6 +18,17 @@ export const baseUtils = `
     generateSubPassword() {
         this.settings.subPassword = Math.random().toString(36).substring(2, 10);
         this.showSubPass = true; 
+    },
+    
+    // 新增：平滑滚动到页面顶部
+    scrollToTop() {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    },
+
+    // 新增：处理滚动事件，控制回到顶部按钮显示
+    handleScroll() {
+        // 当页面向下滚动超过 300px 时显示按钮
+        this.showBackToTop = window.scrollY > 300;
     },
 
     // 通用 API 请求封装
