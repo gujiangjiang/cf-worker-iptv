@@ -34,6 +34,9 @@ export const apiMethods = `
                 this.isAuth = true;
                 localStorage.setItem('iptv_pwd', this.password);
                 
+                // 修改：登录加载完数据后，进行一次分组排序
+                this.sortChannelsByGroup();
+                
                 this.$nextTick(() => { this.initSortable(); });
             }
         } catch(e) {
@@ -100,11 +103,10 @@ export const apiMethods = `
         this.loading = false;
     },
 
-    // 兼容旧接口：移除频道 (调用统一 UI 弹窗)
     removeChannel(index) {
         this.openConfirmModal('deleteChannel', index);
     },
-    // 兼容旧接口：清空列表 (调用统一 UI 弹窗)
+    
     clearAll() {
         this.openConfirmModal('clearAll');
     }
