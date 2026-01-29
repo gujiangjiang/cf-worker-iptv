@@ -52,13 +52,24 @@ export const html = `
                                 <label class="form-label small text-muted">EPG XML 地址 (x-tvg-url)</label>
                                 <input type="text" class="form-control form-control-sm" v-model="settings.epgUrl" placeholder="https://...">
                             </div>
-                            <div class="col-md-4">
+                            <div class="col-md-3">
                                 <label class="form-label small text-muted">回看模式 (catchup)</label>
-                                <input type="text" class="form-control form-control-sm" v-model="settings.catchup" placeholder="例如: append">
+                                <select class="form-select form-select-sm" v-model="settings.catchup">
+                                    <option value="">未设置 (None)</option>
+                                    <option value="append">append (追加)</option>
+                                    <option value="default">default (默认)</option>
+                                    <option value="shift">shift (平移)</option>
+                                    <option value="flussonic">flussonic</option>
+                                    <option value="fs">fs</option>
+                                </select>
                             </div>
-                            <div class="col-md-4">
+                            <div class="col-md-5">
                                 <label class="form-label small text-muted">回看源规则 (catchup-source)</label>
-                                <input type="text" class="form-control form-control-sm" v-model="settings.catchupSource" placeholder="?playseek=\${(b)yyyy...}">
+                                <input type="text" class="form-control form-control-sm" v-model="settings.catchupSource" list="catchupSourceOptions" placeholder="选择或输入规则...">
+                                <datalist id="catchupSourceOptions">
+                                    <option value="?playseek=${(b)yyyyMMddHHmmss}-${(e)yyyyMMddHHmmss}">通用追加格式 (年月日时分秒)</option>
+                                    <option value="?playseek=${(b)timestamp}-${(e)timestamp}">通用时间戳格式</option>
+                                </datalist>
                             </div>
                         </div>
                     </div>
