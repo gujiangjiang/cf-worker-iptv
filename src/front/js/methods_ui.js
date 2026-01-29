@@ -127,11 +127,10 @@ export const uiMethods = `
         this.modals.groupViewer = true;
     },
 
+    // 修改：不再关闭 groupViewer，直接打开编辑框
     openEditChannelFromViewer(index) {
-        this.modals.groupViewer = false;
-        this.$nextTick(() => {
-            this.openEditChannelModal(index);
-        });
+        // this.modals.groupViewer = false; // 删除此行，保持查看器开启
+        this.openEditChannelModal(index);
     },
 
     // --- 批量添加频道 ---
@@ -256,8 +255,13 @@ export const uiMethods = `
             this.channels.unshift(channelData);
             this.showToast('新建成功', 'success');
         }
-        // 修改：保存后确保顺序正确（例如新增了频道）
         this.sortChannelsByGroup();
+        
+        // 修改：如果分组查看器是打开的，刷新它以反映修改（比如改名或换分组）
+        if (this.modals.groupViewer) {
+            this.viewGroupChannels(this.groupViewerData.groupName);
+        }
+
         this.modals.channelEditor = false;
     },
 
@@ -338,6 +342,11 @@ export const uiMethods = `
         else if (actionType === 'deleteChannel') {
             this.channels.splice(targetIndex, 1);
             this.showToast('频道已删除');
+            
+            // 修复：在分组查看器中删除频道后，也要刷新查看器
+            if (this.modals.groupViewer) {
+                this.viewGroupChannels(this.groupViewerData.groupName);
+            }
         }
         else if (actionType === 'deleteGroup') {
             const groupName = this.groups[targetIndex];

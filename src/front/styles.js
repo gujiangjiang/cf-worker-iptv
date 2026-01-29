@@ -11,7 +11,6 @@ export const cssContent = `
     .toast-enter-active, .toast-leave-active { transition: all 0.3s ease; }
     .toast-enter-from, .toast-leave-to { opacity: 0; transform: translateY(-20px); }
     
-    /* 提高 Toast 层级 */
     .toast-container { z-index: 2000 !important; }
     
     .floating-save-btn { width: 60px; height: 60px; font-size: 26px; border-radius: 50%; box-shadow: 0 4px 15px rgba(0,0,0,0.3); z-index: 1030; display: flex; align-items: center; justify-content: center; transition: transform 0.2s; }
@@ -20,8 +19,8 @@ export const cssContent = `
     /* 模态框美化 */
     .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.5); z-index: 1060; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(3px); }
     
-    /* 确认弹窗层级 */
-    .confirm-modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.6); z-index: 1100; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(2px); }
+    /* 修改：大幅提升确认弹窗层级，确保覆盖所有编辑窗口 */
+    .confirm-modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.6); z-index: 1200; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(2px); }
 
     .modal-content { border: none; border-radius: 12px; box-shadow: 0 15px 40px rgba(0,0,0,0.25); background-color: #fff; overflow: hidden; }
     .modal-header { background-color: #e7f1ff; color: #004085; border-bottom: none; padding: 15px 25px; }

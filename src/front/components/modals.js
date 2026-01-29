@@ -82,7 +82,7 @@ export const modalTemplate = `
         </div>
     </div>
 
-    <div v-if="modals.channelEditor" class="modal-overlay" @click.self="modals.channelEditor = false">
+    <div v-if="modals.channelEditor" class="modal-overlay" style="z-index: 1100;" @click.self="modals.channelEditor = false">
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
                 <div class="modal-header">
