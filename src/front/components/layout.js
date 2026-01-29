@@ -11,9 +11,17 @@ export const layoutTemplate = `
 
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h3>📺 IPTV 直播源管理</h3>
-        <div>
-            <a :href="baseUrl + '/m3u'" target="_blank" class="btn btn-outline-primary btn-sm me-2">获取 M3U</a>
-            <a :href="baseUrl + '/txt'" target="_blank" class="btn btn-outline-success btn-sm">获取 TXT</a>
+        
+        <div class="dropdown">
+            <button class="btn btn-outline-primary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                📡 订阅 / 导出
+            </button>
+            <ul class="dropdown-menu">
+                <li><a class="dropdown-item" :href="baseUrl + '/m3u'" target="_blank">📄 标准 M3U (单源)</a></li>
+                <li><a class="dropdown-item" :href="baseUrl + '/m3u?mode=multi'" target="_blank">📑 多源 M3U (同名多源)</a></li>
+                <li><hr class="dropdown-divider"></li>
+                <li><a class="dropdown-item" :href="baseUrl + '/txt'" target="_blank">📝 TXT 格式</a></li>
+            </ul>
         </div>
     </div>
 

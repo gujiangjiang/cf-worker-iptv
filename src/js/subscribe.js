@@ -8,6 +8,9 @@ import { corsHeaders, errorResponse } from './utils.js';
 // 导出 M3U 格式
 export async function handleM3uExport(request, env) {
     try {
+        const url = new URL(request.url);
+        const mode = url.searchParams.get("mode"); // 获取模式参数
+
         const [channels, settings] = await Promise.all([
             env.IPTV_KV.get("channels", { type: "json" }),
             env.IPTV_KV.get("settings", { type: "json" })
@@ -31,23 +34,34 @@ export async function handleM3uExport(request, env) {
             const logo = ch.logo || "";
             const group = ch.group || "默认";
             
-            // 查找主源 (必须是启用且被标记为主源的)
-            let mainUrl = "";
+            // 提取有效源
+            let sources = [];
             if (Array.isArray(ch.sources) && ch.sources.length > 0) {
-                const primary = ch.sources.find(s => s.enabled && s.isPrimary);
-                if (primary) mainUrl = primary.url;
-                else {
-                    // 兜底：如果没有显式主源，找第一个启用的
-                    const firstEnabled = ch.sources.find(s => s.enabled);
-                    if (firstEnabled) mainUrl = firstEnabled.url;
-                }
+                sources = ch.sources.filter(s => s.enabled);
             } else if (ch.url) {
                 // 兼容旧数据
-                mainUrl = ch.url;
+                sources = [{ url: ch.url, isPrimary: true }];
             }
-            
-            if (mainUrl) {
-                m3uContent += `#EXTINF:-1 tvg-name="${tvgName}" tvg-logo="${logo}" group-title="${group}",${name}\n${mainUrl}\n`;
+
+            if (mode === 'multi') {
+                // --- 多源模式：输出所有启用的源，名称相同 ---
+                sources.forEach(s => {
+                    m3uContent += `#EXTINF:-1 tvg-name="${tvgName}" tvg-logo="${logo}" group-title="${group}",${name}\n${s.url}\n`;
+                });
+            } else {
+                // --- 标准模式：只输出一个主源 ---
+                let mainUrl = "";
+                // 优先找标记为主源的
+                const primary = sources.find(s => s.isPrimary);
+                if (primary) mainUrl = primary.url;
+                else if (sources.length > 0) {
+                    // 兜底：没有主源标记，取第一个
+                    mainUrl = sources[0].url;
+                }
+
+                if (mainUrl) {
+                    m3uContent += `#EXTINF:-1 tvg-name="${tvgName}" tvg-logo="${logo}" group-title="${group}",${name}\n${mainUrl}\n`;
+                }
             }
         });
 
@@ -63,7 +77,7 @@ export async function handleM3uExport(request, env) {
     }
 }
 
-// 导出 TXT 格式
+// 导出 TXT 格式 (保持不变)
 export async function handleTxtExport(request, env) {
     try {
         const data = await env.IPTV_KV.get("channels", { type: "json" });
