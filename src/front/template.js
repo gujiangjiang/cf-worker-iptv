@@ -13,7 +13,7 @@ export const html = `
     <script src="https://cdn.jsdelivr.net/npm/vue@3.2.47/dist/vue.global.prod.js"></script>
     <style>
         body { background-color: #f8f9fa; }
-        .container { max-width: 1200px; margin-top: 30px; }
+        .container { max-width: 1300px; margin-top: 30px; } /* 增加宽度以容纳新列 */
         .channel-row input { font-size: 0.9rem; }
         .loading-overlay { position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(255,255,255,0.8); z-index:9999; display:flex; justify-content:center; align-items:center; }
     </style>
@@ -102,17 +102,19 @@ export const html = `
                         <table class="table table-hover mb-0 align-middle">
                             <thead class="table-light">
                                 <tr>
-                                    <th style="width: 15%">分组</th>
-                                    <th style="width: 20%">频道名</th>
+                                    <th style="width: 12%">分组</th>
+                                    <th style="width: 12%">EPG 名称</th>
+                                    <th style="width: 15%">显示名称</th>
                                     <th style="width: 15%">Logo URL</th>
-                                    <th style="width: 40%">直播源 URL</th>
+                                    <th style="width: 36%">直播源 URL</th>
                                     <th style="width: 10%">操作</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 <tr v-for="(item, index) in channels" :key="index" class="channel-row">
                                     <td><input type="text" class="form-control form-control-sm" v-model="item.group"></td>
-                                    <td><input type="text" class="form-control form-control-sm" v-model="item.name"></td>
+                                    <td><input type="text" class="form-control form-control-sm" v-model="item.tvgName" placeholder="tvg-name"></td>
+                                    <td><input type="text" class="form-control form-control-sm" v-model="item.name" placeholder="列表显示名"></td>
                                     <td><input type="text" class="form-control form-control-sm" v-model="item.logo" placeholder="http://..."></td>
                                     <td><input type="text" class="form-control form-control-sm" v-model="item.url"></td>
                                     <td>
@@ -221,7 +223,6 @@ export const html = `
                     if (!content) return;
                     const lines = content.split('\\n');
                     
-                    // 1. 解析头部全局信息 (#EXTM3U)
                     const headerLine = lines.find(l => l.startsWith('#EXTM3U'));
                     let settingsFound = false;
                     if(headerLine) {
@@ -234,117 +235,3 @@ export const html = `
                             if(catchupMatch) this.settings.catchup = catchupMatch[1];
                             if(sourceMatch) this.settings.catchupSource = sourceMatch[1];
                             settingsFound = true;
-                            this.showSettings = true;
-                        }
-                    }
-
-                    // 2. 解析频道列表 (优化版逻辑)
-                    const newChannels = [];
-                    let currentInfo = {};
-                    
-                    lines.forEach(line => {
-                        line = line.trim();
-                        if (line.includes('EXTINF:')) { // 兼容 #EXTINF: 和 EXTINF:
-                            // 逻辑：尝试找到"属性区"和"频道名"的分界点
-                            // 通常是最后一个逗号，且该逗号不在引号内
-                            // 简单起见，我们假设属性中的值都包裹在双引号中，所以最后一个逗号通常是分界线
-                            
-                            let metaPart = line;
-                            let namePart = '';
-                            
-                            const lastComma = line.lastIndexOf(',');
-                            const lastQuote = line.lastIndexOf('"');
-                            
-                            // 如果最后一个逗号在最后一个引号之后，说明它是分隔符
-                            if (lastComma > lastQuote && lastComma > -1) {
-                                metaPart = line.substring(0, lastComma);
-                                namePart = line.substring(lastComma + 1).trim();
-                            }
-                            
-                            // 提取属性的辅助函数
-                            const getAttr = (key) => {
-                                const regex = new RegExp(\`\${key}="([^"]*)"\`);
-                                const match = metaPart.match(regex);
-                                return match ? match[1] : '';
-                            };
-                            
-                            currentInfo = {
-                                group: getAttr('group-title') || '未分组',
-                                logo: getAttr('tvg-logo') || '',
-                                // 优先使用逗号后的名称，如果没有则尝试 tvg-name，最后 fallback 到 '未知频道'
-                                name: namePart || getAttr('tvg-name') || '未知频道'
-                            };
-                            
-                        } else if (line && !line.startsWith('#')) {
-                            if (currentInfo.name) {
-                                newChannels.push({
-                                    ...currentInfo,
-                                    url: line
-                                });
-                                currentInfo = {};
-                            }
-                        }
-                    });
-                    
-                    if (newChannels.length === 0) {
-                        alert('未解析到有效频道，请检查文件格式。');
-                        return;
-                    }
-
-                    let msg = \`解析到 \${newChannels.length} 个频道。\`;
-                    if(settingsFound) msg += '\\n已自动提取并更新了全局设置 (EPG/回看)。';
-                    msg += '\\n选择"确定"追加到现有列表，选择"取消"覆盖现有列表。';
-
-                    if(confirm(msg)) {
-                         this.channels = [...this.channels, ...newChannels];
-                    } else {
-                         this.channels = newChannels;
-                    }
-                },
-                addChannel() {
-                    this.channels.unshift({ name: '新频道', group: '默认', logo: '', url: '' });
-                },
-                removeChannel(index) {
-                    this.channels.splice(index, 1);
-                },
-                moveUp(index) {
-                    if (index > 0) {
-                        const item = this.channels[index];
-                        this.channels.splice(index, 1);
-                        this.channels.splice(index - 1, 0, item);
-                    }
-                },
-                clearAll() {
-                    if(confirm('确定要清空所有频道吗？')) {
-                        this.channels = [];
-                    }
-                },
-                async saveData() {
-                    this.loading = true;
-                    try {
-                        const [resList, resSettings] = await Promise.all([
-                            fetch('/api/save', {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json', 'Authorization': this.password },
-                                body: JSON.stringify(this.channels)
-                            }),
-                            fetch('/api/settings', {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json', 'Authorization': this.password },
-                                body: JSON.stringify(this.settings)
-                            })
-                        ]);
-
-                        if(resList.ok && resSettings.ok) alert('保存成功！');
-                        else alert('保存失败');
-                    } catch(e) {
-                        alert('保存出错');
-                    }
-                    this.loading = false;
-                }
-            }
-        }).mount('#app');
-    </script>
-</body>
-</html>
-`;

@@ -8,7 +8,6 @@ import { corsHeaders, errorResponse } from './utils.js';
 // 导出 M3U 格式
 export async function handleM3uExport(request, env) {
     try {
-        // 并行获取频道列表和全局配置
         const [channels, settings] = await Promise.all([
             env.IPTV_KV.get("channels", { type: "json" }),
             env.IPTV_KV.get("settings", { type: "json" })
@@ -18,7 +17,7 @@ export async function handleM3uExport(request, env) {
 
         let m3uContent = "#EXTM3U";
         
-        // 拼接头部全局配置信息 (EPG, Catchup)
+        // 拼接头部全局配置信息
         if (settings) {
             if (settings.epgUrl) m3uContent += ` x-tvg-url="${settings.epgUrl}"`;
             if (settings.catchup) m3uContent += ` catchup="${settings.catchup}"`;
@@ -28,11 +27,15 @@ export async function handleM3uExport(request, env) {
 
         channels.forEach(ch => {
             // 确保没有 undefined 出现
-            const name = ch.name || "未知频道";
+            const name = ch.name || "未知频道"; // 显示名称
+            // 如果 tvgName 不存在（旧数据），则回退使用 name，保证兼容性
+            const tvgName = ch.tvgName || name; 
             const logo = ch.logo || "";
             const group = ch.group || "默认";
             const url = ch.url || "";
-            m3uContent += `#EXTINF:-1 tvg-name="${name}" tvg-logo="${logo}" group-title="${group}",${name}\n${url}\n`;
+            
+            // 构造 EXTINF 行：tvg-name使用独立字段，尾部使用显示名称
+            m3uContent += `#EXTINF:-1 tvg-name="${tvgName}" tvg-logo="${logo}" group-title="${group}",${name}\n${url}\n`;
         });
 
         return new Response(m3uContent, {
@@ -67,6 +70,7 @@ export async function handleTxtExport(request, env) {
         for (const [groupName, channels] of Object.entries(groups)) {
             txtContent += `${groupName},#genre#\n`;
             channels.forEach(ch => {
+                // TXT 格式只显示“显示名称”
                 txtContent += `${ch.name},${ch.url}\n`;
             });
         }
