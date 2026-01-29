@@ -1,0 +1,100 @@
+name: Deploy to Cloudflare
+
+# 触发条件：推送到 main 分支 或 手动触发
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    name: Deploy
+    steps:
+      # 1. 检出代码
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # 2. 设置 Node.js 环境
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # 3. 第一步：检测 Cloudflare 秘钥
+      - name: Check Cloudflare Secrets
+        run: |
+          if [ -z "${{ secrets.CF_API_TOKEN }}" ]; then
+            echo "::error::Missing CF_API_TOKEN secret. Please add it in GitHub Settings."
+            exit 1
+          fi
+          if [ -z "${{ secrets.CF_ACCOUNT_ID }}" ]; then
+            echo "::error::Missing CF_ACCOUNT_ID secret. Please add it in GitHub Settings."
+            exit 1
+          fi
+          echo "Cloudflare credentials detected."
+
+      # 4. 第二步：检测必填项 PASSWORD
+      - name: Check Password Secret
+        run: |
+          if [ -z "${{ secrets.PASSWORD }}" ]; then
+            echo "::error::Missing PASSWORD secret. Please add it in GitHub Settings."
+            exit 1
+          fi
+          echo "User password detected."
+
+      # 5. 第三步：自动创建 KV 存储库并关联 (含配置文件注入)
+      - name: Auto Configure KV & Inject Secrets
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+          USER_PASSWORD: ${{ secrets.PASSWORD }}
+        run: |
+          # 安装 wrangler 用于 KV 管理操作
+          npm install -g wrangler
+
+          echo "🔍 Checking KV Namespace 'IPTV_KV'..."
+          
+          # 获取当前的 KV 列表
+          EXISTING_KV=$(npx wrangler kv:namespace list)
+          
+          # 使用 jq 查找名为 IPTV_KV 的 ID
+          KV_ID=$(echo "$EXISTING_KV" | jq -r '.[] | select(.title == "IPTV_KV") | .id')
+          
+          if [ -z "$KV_ID" ] || [ "$KV_ID" == "null" ]; then
+            echo "⚠️ KV Namespace 'IPTV_KV' not found. Creating..."
+            # 创建新的 Namespace
+            npx wrangler kv:namespace create IPTV_KV
+            # 重新获取 ID 以确保准确
+            KV_ID=$(npx wrangler kv:namespace list | jq -r '.[] | select(.title == "IPTV_KV") | .id')
+            echo "✅ Created new KV Namespace with ID: $KV_ID"
+          else
+            echo "✅ Found existing KV Namespace ID: $KV_ID"
+          fi
+          
+          if [ -z "$KV_ID" ] || [ "$KV_ID" == "null" ]; then
+            echo "::error::Failed to retrieve or create KV ID."
+            exit 1
+          fi
+
+          echo "⚙️ Updating wrangler.toml..."
+
+          # 1. 替换 KV ID (匹配之前的占位符 xxxxx...)
+          sed -i "s/id = \"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\"/id = \"$KV_ID\"/g" wrangler.toml
+          
+          # 2. 注入密码 (替换 PASSWORD = "..." 格式)
+          # 使用双引号包裹 sed 表达式以解析变量
+          sed -i 's/PASSWORD = ".*"/PASSWORD = "'"$USER_PASSWORD"'"/' wrangler.toml
+          
+          echo "Configuration updated successfully."
+          # 验证替换结果 (为了安全不打印密码行)
+          grep "id =" wrangler.toml
+
+      # 6. 执行部署
+      - name: Deploy to Cloudflare Workers
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CF_API_TOKEN }}
+          accountId: ${{ secrets.CF_ACCOUNT_ID }}
+          command: deploy
