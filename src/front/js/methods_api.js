@@ -80,8 +80,16 @@ export const apiMethods = `
                 // 3. 处理分组
                 let remoteGroups = await groupsRes.json();
                 if (!remoteGroups || remoteGroups.length === 0) {
-                    const extracted = new Set(this.channels.map(c => c.group || '默认'));
+                    // 如果远程没有分组数据，尝试从频道中提取，同时过滤 '默认'
+                    const extracted = new Set(
+                        this.channels
+                            .map(c => c.group)
+                            .filter(g => g && g !== '默认')
+                    );
                     remoteGroups = Array.from(extracted);
+                } else {
+                    // 修复：如果加载了远程分组，确保过滤掉 '默认'
+                    remoteGroups = remoteGroups.filter(g => g !== '默认');
                 }
                 this.groups = remoteGroups;
 

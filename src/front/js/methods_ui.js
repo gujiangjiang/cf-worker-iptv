@@ -468,6 +468,8 @@ export const uiMethods = `
     addGroup() {
         const val = this.newGroupInput.trim();
         if(!val) return;
+        // 修复：禁止手动添加 '默认' 分组，因为系统已内置
+        if(val === '默认') return this.showToast('系统保留分组名称，无法手动添加', 'error');
         if(this.groups.includes(val)) return this.showToast('分组已存在', 'error');
         this.groups.push(val);
         this.newGroupInput = '';
@@ -479,8 +481,15 @@ export const uiMethods = `
     },
     
     syncGroupsFromChannels() {
-        const extracted = new Set(this.channels.map(c => c.group || '默认'));
+        // 修复：从频道同步分组时，过滤掉 '默认'
+        const extracted = this.channels
+            .map(c => c.group)
+            .filter(g => g && g !== '默认');
+            
         const merged = new Set([...this.groups, ...extracted]);
+        // 双重保险：确保 Set 中不包含 '默认'
+        merged.delete('默认');
+
         this.groups = Array.from(merged);
         this.showToast('已同步分组', 'success');
         this.sortChannelsByGroup();

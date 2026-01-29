@@ -79,11 +79,15 @@ export const importMethods = `
         const displayName = ch.name || '未知频道';
         const tvgName = (ch.tvgName !== undefined && ch.tvgName !== null) ? ch.tvgName : displayName;
         
+        // 默认分组处理：如果是空或者 undefined，设为'默认'
+        const groupName = ch.group || '默认';
+        
         return {
             ...ch,
             id: ch.id || this.generateId(),
             name: displayName,
             tvgName: tvgName,
+            group: groupName,
             logo: ch.logo || '',
             useLogo: !!ch.logo, 
             sources: sources
@@ -202,7 +206,8 @@ export const importMethods = `
         const newGroups = new Set(this.groups);
         let groupsAdded = 0;
         rawChannels.forEach(ch => {
-            if(ch.group && !newGroups.has(ch.group)) {
+            // 修复：提取分组时，显式排除 '默认' 分组，避免它进入可管理分组列表
+            if(ch.group && ch.group !== '默认' && !newGroups.has(ch.group)) {
                 newGroups.add(ch.group);
                 groupsAdded++;
             }
