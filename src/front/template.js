@@ -13,13 +13,29 @@ export const html = `
     <script src="https://cdn.jsdelivr.net/npm/vue@3.2.47/dist/vue.global.prod.js"></script>
     <style>
         body { background-color: #f8f9fa; }
-        .container { max-width: 1300px; margin-top: 30px; } /* 增加宽度以容纳新列 */
+        .container { max-width: 1300px; margin-top: 30px; }
         .channel-row input { font-size: 0.9rem; }
+        /* 加载遮罩层 */
         .loading-overlay { position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(255,255,255,0.8); z-index:9999; display:flex; justify-content:center; align-items:center; }
+        
+        /* Toast 动画过渡 */
+        .toast-enter-active, .toast-leave-active { transition: all 0.3s ease; }
+        .toast-enter-from, .toast-leave-to { opacity: 0; transform: translateY(-20px); }
     </style>
 </head>
 <body>
     <div id="app" class="container pb-5">
+        <div class="toast-container position-fixed top-0 start-50 translate-middle-x p-3" style="z-index: 1050">
+            <div :class="['toast', 'align-items-center', 'text-white', 'border-0', toastClass, toast.show ? 'show' : '']" role="alert" aria-live="assertive" aria-atomic="true">
+                <div class="d-flex">
+                    <div class="toast-body fs-6">
+                        {{ toast.message }}
+                    </div>
+                    <button type="button" class="btn-close btn-close-white me-2 m-auto" @click="toast.show = false" aria-label="Close"></button>
+                </div>
+            </div>
+        </div>
+
         <div class="d-flex justify-content-between align-items-center mb-4">
             <h3>📺 IPTV 直播源管理</h3>
             <div>
@@ -147,10 +163,23 @@ export const html = `
                         catchup: '',
                         catchupSource: ''
                     },
+                    // Toast 状态
+                    toast: {
+                        show: false,
+                        message: '',
+                        type: 'success' // success, error
+                    },
+                    toastTimer: null,
+                    
                     showSettings: false,
                     loading: false,
                     importUrl: '',
                     baseUrl: window.location.origin
+                }
+            },
+            computed: {
+                toastClass() {
+                    return this.toast.type === 'error' ? 'bg-danger' : 'bg-success';
                 }
             },
             mounted() {
@@ -161,6 +190,18 @@ export const html = `
                 }
             },
             methods: {
+                // 显示 Toast 消息
+                showToast(message, type = 'success') {
+                    this.toast.message = message;
+                    this.toast.type = type;
+                    this.toast.show = true;
+                    
+                    if (this.toastTimer) clearTimeout(this.toastTimer);
+                    this.toastTimer = setTimeout(() => {
+                        this.toast.show = false;
+                    }, 3000); // 3秒后自动消失
+                },
+
                 async login() {
                     this.loading = true;
                     try {
@@ -170,7 +211,7 @@ export const html = `
                         ]);
 
                         if(listRes.status === 401) {
-                            alert('密码错误');
+                            this.showToast('密码错误', 'error');
                             localStorage.removeItem('iptv_pwd');
                         } else {
                             this.channels = await listRes.json();
@@ -180,7 +221,7 @@ export const html = `
                             localStorage.setItem('iptv_pwd', this.password);
                         }
                     } catch(e) {
-                        alert('连接失败');
+                        this.showToast('连接服务器失败', 'error');
                     }
                     this.loading = false;
                 },
@@ -195,7 +236,7 @@ export const html = `
                     reader.readAsText(file);
                 },
                 async handleUrlImport() {
-                    if (!this.importUrl) return alert('请输入有效的 URL');
+                    if (!this.importUrl) return this.showToast('请输入有效的 URL', 'error');
                     this.loading = true;
                     try {
                         const res = await fetch('/api/fetch-m3u', {
@@ -212,10 +253,10 @@ export const html = `
                             this.parseM3U(text);
                             this.importUrl = '';
                         } else {
-                            alert('导入失败，服务器返回错误: ' + res.statusText);
+                            this.showToast('导入失败: ' + res.statusText, 'error');
                         }
                     } catch (e) {
-                        alert('网络请求出错，请检查链接或稍后重试');
+                        this.showToast('网络请求出错，请检查链接', 'error');
                     }
                     this.loading = false;
                 },
@@ -235,3 +276,112 @@ export const html = `
                             if(catchupMatch) this.settings.catchup = catchupMatch[1];
                             if(sourceMatch) this.settings.catchupSource = sourceMatch[1];
                             settingsFound = true;
+                            this.showSettings = true;
+                        }
+                    }
+
+                    const newChannels = [];
+                    let currentInfo = {};
+                    
+                    lines.forEach(line => {
+                        line = line.trim();
+                        if (line.includes('EXTINF:')) {
+                            let metaPart = line;
+                            let namePart = '';
+                            const lastComma = line.lastIndexOf(',');
+                            const lastQuote = line.lastIndexOf('"');
+                            if (lastComma > lastQuote && lastComma > -1) {
+                                metaPart = line.substring(0, lastComma);
+                                namePart = line.substring(lastComma + 1).trim();
+                            }
+                            
+                            const getAttr = (key) => {
+                                const regex = new RegExp(\`\${key}="([^"]*)"\`);
+                                const match = metaPart.match(regex);
+                                return match ? match[1] : '';
+                            };
+                            
+                            const tvgName = getAttr('tvg-name');
+                            currentInfo = {
+                                group: getAttr('group-title') || '未分组',
+                                logo: getAttr('tvg-logo') || '',
+                                tvgName: tvgName || '',
+                                name: namePart || tvgName || '未知频道'
+                            };
+                            
+                        } else if (line && !line.startsWith('#')) {
+                            if (currentInfo.name) {
+                                newChannels.push({
+                                    ...currentInfo,
+                                    url: line
+                                });
+                                currentInfo = {};
+                            }
+                        }
+                    });
+                    
+                    if (newChannels.length === 0) {
+                        this.showToast('未解析到有效频道，请检查文件格式', 'error');
+                        return;
+                    }
+
+                    // 确认框涉及用户决策，仍保留为 confirm
+                    let msg = \`解析到 \${newChannels.length} 个频道。\`;
+                    if(settingsFound) msg += '\\n已自动提取并更新了全局设置。';
+                    msg += '\\n选择"确定"追加到现有列表，选择"取消"覆盖现有列表。';
+
+                    if(confirm(msg)) {
+                         this.channels = [...this.channels, ...newChannels];
+                    } else {
+                         this.channels = newChannels;
+                    }
+                    this.showToast(\`成功导入 \${newChannels.length} 个频道\`, 'success');
+                },
+                addChannel() {
+                    this.channels.unshift({ name: '新频道', tvgName: '', group: '默认', logo: '', url: '' });
+                },
+                removeChannel(index) {
+                    this.channels.splice(index, 1);
+                },
+                moveUp(index) {
+                    if (index > 0) {
+                        const item = this.channels[index];
+                        this.channels.splice(index, 1);
+                        this.channels.splice(index - 1, 0, item);
+                    }
+                },
+                clearAll() {
+                    if(confirm('确定要清空所有频道吗？')) {
+                        this.channels = [];
+                        this.showToast('列表已清空', 'success');
+                    }
+                },
+                async saveData() {
+                    this.loading = true;
+                    try {
+                        const [resList, resSettings] = await Promise.all([
+                            fetch('/api/save', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json', 'Authorization': this.password },
+                                body: JSON.stringify(this.channels)
+                            }),
+                            fetch('/api/settings', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json', 'Authorization': this.password },
+                                body: JSON.stringify(this.settings)
+                            })
+                        ]);
+
+                        if(resList.ok && resSettings.ok) this.showToast('保存成功！', 'success');
+                        else this.showToast('保存失败', 'error');
+                    } catch(e) {
+                        this.showToast('保存请求出错', 'error');
+                    }
+                    this.loading = false;
+                }
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>
+`;
