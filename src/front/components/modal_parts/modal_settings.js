@@ -68,7 +68,8 @@ export const settingsModal = createModal({
     title: '⚙️ M3U 参数设置',
     size: 'modal-lg',
     body: settingsBody,
-    footer: `<button class="btn btn-primary" @click="modals.settings = false">完成</button>`
+    // 修复：改为调用 saveM3uSettings 这一保存方法
+    footer: `<button class="btn btn-primary" @click="saveM3uSettings">确认并保存</button>`
 });
 
 // 2. 系统全局设置 (访客权限)

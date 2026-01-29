@@ -88,6 +88,11 @@ export const modalMethods = `
         await this.saveSettingsOnly();
         this.modals.systemSettings = false;
     },
+    // 新增：M3U 设置保存并关闭
+    async saveM3uSettings() {
+        await this.saveSettingsOnly();
+        this.modals.settings = false;
+    },
     openSettingsModal() {
         if (this.settings.epgUrl && (!this.settings.epgs || this.settings.epgs.length === 0)) {
             this.settings.epgs = [{ url: this.settings.epgUrl, enabled: true, _id: this.generateId() }];
