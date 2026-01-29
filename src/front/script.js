@@ -63,37 +63,41 @@ export const jsContent = `
                         this.showToast('密码错误', 'error');
                         localStorage.removeItem('iptv_pwd');
                     } else {
-                        this.channels = await listRes.json();
+                        // 修复：加载数据时进行兼容性处理
+                        const rawList = await listRes.json();
+                        this.channels = rawList.map(ch => ({
+                            ...ch,
+                            // 如果 tvgName 字段不存在（旧数据），则默认使用显示名称
+                            tvgName: (ch.tvgName !== undefined && ch.tvgName !== null) ? ch.tvgName : ch.name
+                        }));
+
                         const remoteSettings = await settingsRes.json();
                         this.settings = { ...this.settings, ...remoteSettings };
                         this.isAuth = true;
                         localStorage.setItem('iptv_pwd', this.password);
                         
-                        // 数据加载完成并渲染 DOM 后，初始化拖拽
                         this.$nextTick(() => {
                             this.initSortable();
                         });
                     }
                 } catch(e) {
+                    console.error(e);
                     this.showToast('连接服务器失败', 'error');
                 }
                 this.loading = false;
             },
             
-            // 初始化拖拽排序
             initSortable() {
                 const el = document.getElementById('channel-list');
                 if (!el) return;
                 
-                // 防止重复初始化
                 if (this.sortableInstance) this.sortableInstance.destroy();
 
                 this.sortableInstance = Sortable.create(el, {
-                    handle: '.drag-handle', // 指定只有拖拽手柄可以触发拖拽
-                    animation: 150, // 动画毫秒数
-                    ghostClass: 'sortable-ghost', // 占位符样式
+                    handle: '.drag-handle',
+                    animation: 150,
+                    ghostClass: 'sortable-ghost',
                     onEnd: (evt) => {
-                        // 同步数据顺序：从旧位置移除，插入新位置
                         const item = this.channels[evt.oldIndex];
                         this.channels.splice(evt.oldIndex, 1);
                         this.channels.splice(evt.newIndex, 0, item);
@@ -178,11 +182,14 @@ export const jsContent = `
                         };
                         
                         const tvgName = getAttr('tvg-name');
+                        const displayName = namePart || tvgName || '未知频道';
+
                         currentInfo = {
                             group: getAttr('group-title') || '未分组',
                             logo: getAttr('tvg-logo') || '',
-                            tvgName: tvgName || '',
-                            name: namePart || tvgName || '未知频道'
+                            // 解析时，如果 tvg-name 存在则使用，否则默认等于显示名称
+                            tvgName: tvgName || displayName,
+                            name: displayName
                         };
                         
                     } else if (line && !line.startsWith('#')) {
@@ -213,7 +220,7 @@ export const jsContent = `
                 this.showToast(\`成功导入 \${newChannels.length} 个频道\`, 'success');
             },
             addChannel() {
-                this.channels.unshift({ name: '新频道', tvgName: '', group: '默认', logo: '', url: '' });
+                this.channels.unshift({ name: '新频道', tvgName: '新频道', group: '默认', logo: '', url: '' });
             },
             removeChannel(index) {
                 this.channels.splice(index, 1);
