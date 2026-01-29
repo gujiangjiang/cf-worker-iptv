@@ -2,29 +2,47 @@
  * 前端导入与逻辑处理模块
  */
 export const importMethods = `
+    // 辅助：生成唯一ID
+    generateId() {
+        return Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
+    },
+
     normalizeName(name) {
         if (!name) return '';
         return name.replace(/[-_\\s]/g, '').toUpperCase();
     },
 
+    // 数据标准化：确保每个对象都有唯一 ID
     standardizeChannel(ch) {
         let sources = [];
+        
+        // 1. 处理 sources
         if (Array.isArray(ch.sources) && ch.sources.length > 0 && typeof ch.sources[0] === 'object') {
-            sources = ch.sources;
-        } else if (Array.isArray(ch.urls)) {
+            sources = ch.sources.map(s => ({
+                ...s,
+                _id: s._id || Date.now().toString(36) + Math.random().toString(36).substr(2, 5) // 补全源 ID
+            }));
+        } 
+        // 2. 处理 urls (字符串数组)
+        else if (Array.isArray(ch.urls)) {
             sources = ch.urls.filter(u => u && u.trim()).map((u, idx) => ({
                 url: u,
                 enabled: true,
-                isPrimary: idx === 0 
+                isPrimary: idx === 0,
+                _id: Date.now().toString(36) + Math.random().toString(36).substr(2, 5)
             }));
-        } else if (ch.url) {
+        } 
+        // 3. 处理单 url
+        else if (ch.url) {
             sources = [{
                 url: ch.url,
                 enabled: true,
-                isPrimary: true
+                isPrimary: true,
+                _id: Date.now().toString(36) + Math.random().toString(36).substr(2, 5)
             }];
         }
 
+        // 确保主源逻辑
         if (sources.length > 0 && !sources.some(s => s.isPrimary && s.enabled)) {
             if(sources[0].enabled) sources[0].isPrimary = true;
         }
@@ -34,6 +52,7 @@ export const importMethods = `
         
         return {
             ...ch,
+            id: ch.id || Date.now().toString(36) + Math.random().toString(36).substr(2, 5), // 确保频道 ID
             name: displayName,
             tvgName: tvgName,
             logo: ch.logo || '',
@@ -67,9 +86,13 @@ export const importMethods = `
             
             if(epgMatch || catchupMatch || sourceMatch) {
                 if(epgMatch) {
-                    // 修改：支持解析多个逗号分隔的 EPG
                     const urls = epgMatch[1].split(',');
-                    this.settings.epgs = urls.filter(u => u.trim()).map(u => ({ url: u.trim(), enabled: true }));
+                    // 解析 M3U 时也生成 ID
+                    this.settings.epgs = urls.filter(u => u.trim()).map(u => ({ 
+                        url: u.trim(), 
+                        enabled: true,
+                        _id: this.generateId()
+                    }));
                 }
                 if(catchupMatch) this.settings.catchup = catchupMatch[1];
                 if(sourceMatch) this.settings.catchupSource = sourceMatch[1];
@@ -106,10 +129,15 @@ export const importMethods = `
                 };
             } else if (line && !line.startsWith('#')) {
                 if (currentInfo.name) {
-                    // M3U 导入默认生成单个源对象
+                    // M3U 导入默认生成
                     rawChannels.push({ 
                         ...currentInfo, 
-                        sources: [{ url: line, enabled: true, isPrimary: true }] 
+                        sources: [{ 
+                            url: line, 
+                            enabled: true, 
+                            isPrimary: true,
+                            _id: this.generateId()
+                        }] 
                     });
                     currentInfo = {};
                 }
@@ -142,6 +170,7 @@ export const importMethods = `
         // 1. 内部去重
         const uniqueNewChannels = [];
         const tempMap = new Map();
+        
         rawChannels.forEach(ch => {
             ch = this.standardizeChannel(ch); 
             const key = this.normalizeName(ch.name);
@@ -217,11 +246,12 @@ export const importMethods = `
     applyConflictLogic(action, index, newItem, primaryUrl, mergedUrlStrings) {
         if (action === 'new') this.channels[index] = newItem;
         else if (action === 'merge') {
-            // 重构 sources 对象数组
+            // 合并时重新生成源对象，带ID
             const newSources = mergedUrlStrings.map(u => ({
                 url: u,
                 enabled: true,
-                isPrimary: u === primaryUrl
+                isPrimary: u === primaryUrl,
+                _id: this.generateId()
             }));
             this.channels[index].sources = newSources;
         }

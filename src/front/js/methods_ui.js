@@ -2,6 +2,11 @@
  * 前端 UI 交互逻辑模块
  */
 export const uiMethods = `
+    // 辅助：生成唯一ID (重复定义以确保独立性，或在 importMethods 中复用)
+    generateId() {
+        return Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
+    },
+
     showToast(message, type = 'success') {
         this.toast.message = message;
         this.toast.type = type;
@@ -165,17 +170,24 @@ export const uiMethods = `
         this.modals.groupChannelAdder = false;
     },
 
-    // --- M3U 参数 (全局设置) ---
+    // --- M3U 参数 ---
     openSettingsModal() {
-        // 数据迁移：如果存在旧的 epgUrl 且 epgs 为空，则迁移
+        // 数据迁移：旧字符串 -> 新对象数组 (补 ID)
         if (this.settings.epgUrl && (!this.settings.epgs || this.settings.epgs.length === 0)) {
-            this.settings.epgs = [{ url: this.settings.epgUrl, enabled: true }];
+            this.settings.epgs = [{ 
+                url: this.settings.epgUrl, 
+                enabled: true, 
+                _id: this.generateId() 
+            }];
             delete this.settings.epgUrl;
         }
-        // 初始化数组
         if (!this.settings.epgs) this.settings.epgs = [];
+        
+        // 确保所有现有 EPG 都有 _id (防止旧数据无ID)
+        this.settings.epgs.forEach(e => {
+            if(!e._id) e._id = this.generateId();
+        });
 
-        // 回看模式初始化
         const source = this.settings.catchupSource;
         if (source === '?playseek=\${(b)yyyyMMddHHmmss}-\${(e)yyyyMMddHHmmss}') {
             this.catchupMode = 'append';
@@ -188,16 +200,19 @@ export const uiMethods = `
         this.$nextTick(() => this.initEpgSortable());
     },
 
-    // 修改：添加 EPG (增加非空校验)
     addEpg() {
         const len = this.settings.epgs.length;
         if (len > 0 && !this.settings.epgs[len - 1].url.trim()) {
-            return this.showToast('请先填写当前的 EPG 地址', 'warning'); // 使用 warning 类型的 toast
+            return this.showToast('请先填写当前的 EPG 地址', 'warning');
         }
-        this.settings.epgs.push({ url: '', enabled: true });
+        // 新增时带 ID
+        this.settings.epgs.push({ 
+            url: '', 
+            enabled: true,
+            _id: this.generateId() 
+        });
     },
 
-    // 新增：删除 EPG
     removeEpg(index) {
         this.settings.epgs.splice(index, 1);
     },
@@ -218,7 +233,7 @@ export const uiMethods = `
             group: '默认',
             name: '', tvgName: '',
             useLogo: false, logo: '',
-            sources: [] 
+            sources: [] // 初始为空，用户点击添加时会生成带ID的源
         };
         this.logoPreviewUrl = '';
         this.modals.channelEditor = true;
@@ -230,6 +245,12 @@ export const uiMethods = `
         this.editingIndex = index;
         const ch = this.channels[index];
         this.channelForm = JSON.parse(JSON.stringify(ch));
+        // 容错：确保 sources 有 _id
+        if(this.channelForm.sources) {
+            this.channelForm.sources.forEach(s => {
+                if(!s._id) s._id = this.generateId();
+            });
+        }
         if (!this.channelForm.group) {
             this.channelForm.group = '默认';
         }
@@ -242,8 +263,10 @@ export const uiMethods = `
         if(!this.channelForm.name) return this.showToast('频道名称不能为空', 'error');
         if(this.channelForm.sources.length === 0) return this.showToast('至少需要一个直播源', 'error');
         
+        // 构造数据时保留 id
         const channelData = {
             ...this.channelForm,
+            id: this.editMode ? this.channels[this.editingIndex].id : this.generateId(), // 确保 ID
             tvgName: this.channelForm.tvgName || this.channelForm.name,
             logo: this.channelForm.useLogo ? this.channelForm.logo : ''
         };
@@ -257,7 +280,6 @@ export const uiMethods = `
         }
         this.sortChannelsByGroup();
         
-        // 修改：如果分组查看器是打开的，刷新它以反映修改（比如改名或换分组）
         if (this.modals.groupViewer) {
             this.viewGroupChannels(this.groupViewerData.groupName);
         }
@@ -272,14 +294,18 @@ export const uiMethods = `
     },
 
     // --- 直播源管理 ---
-    // 修改：添加直播源 (增加非空校验)
     addSource() {
         const len = this.channelForm.sources.length;
-        // 如果有上一个源，且该源地址为空，则阻止添加
         if (len > 0 && !this.channelForm.sources[len - 1].url.trim()) {
-            return this.showToast('请先填写当前的直播源链接', 'warning'); // 假设 toast 支持 'warning' 类型，或者样式
+            return this.showToast('请先填写当前的直播源链接', 'warning');
         }
-        this.channelForm.sources.push({ url: '', enabled: true, isPrimary: false });
+        // 新增时带 ID
+        this.channelForm.sources.push({ 
+            url: '', 
+            enabled: true, 
+            isPrimary: false,
+            _id: this.generateId() 
+        });
         if (this.channelForm.sources.length === 1) {
             this.channelForm.sources[0].isPrimary = true;
         }

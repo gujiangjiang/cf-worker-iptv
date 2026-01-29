@@ -71,7 +71,7 @@ export const layoutTemplate = `
                             </tr>
                         </thead>
                         <tbody id="channel-list">
-                            <tr v-for="(item, index) in channels" :key="index" class="channel-row">
+                            <tr v-for="(item, index) in channels" :key="item.id" class="channel-row">
                                 <td class="text-center cursor-move drag-handle"><span class="text-secondary">⠿</span></td>
                                 <td><span class="badge bg-light text-dark border">{{ item.group }}</span></td>
                                 <td class="text-muted small">{{ item.tvgName }}</td>
