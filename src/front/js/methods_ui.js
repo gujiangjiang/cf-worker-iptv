@@ -320,6 +320,22 @@ export const uiMethods = `
             this.channelForm.sources.forEach(s => {
                 if(!s._id) s._id = this.generateId();
             });
+            
+            // 修复：数据清洗逻辑，确保只有一个主源
+            const primaryIndices = this.channelForm.sources
+                .map((s, i) => s.isPrimary ? i : -1)
+                .filter(i => i !== -1);
+            
+            if (primaryIndices.length > 1) {
+                // 如果有多个主源，只保留第一个，其他的设为 false
+                this.channelForm.sources.forEach((s, i) => {
+                    s.isPrimary = (i === primaryIndices[0]);
+                });
+            } else if (primaryIndices.length === 0 && this.channelForm.sources.length > 0) {
+                // 如果没有主源且有源存在，默认设置第一个可用的为主要
+                const firstEnabled = this.channelForm.sources.findIndex(s => s.enabled);
+                if (firstEnabled !== -1) this.channelForm.sources[firstEnabled].isPrimary = true;
+            }
         }
         if (!this.channelForm.group) {
             this.channelForm.group = '默认';

@@ -351,7 +351,7 @@ export const modalTemplate = `
                                 </div>
                                 <input type="text" class="form-control form-control-sm" v-model="source.url" :disabled="!source.enabled" placeholder="http://...">
                                 <div class="form-check" title="设为 M3U 主源">
-                                    <input class="form-check-input" type="radio" :checked="source.isPrimary" @click="setPrimarySource(idx)" :disabled="!source.enabled">
+                                    <input class="form-check-input" type="radio" name="primary_source_radio" :checked="source.isPrimary" @click="setPrimarySource(idx)" :disabled="!source.enabled">
                                 </div>
                                 <button class="btn btn-sm btn-outline-danger border-0" @click="openConfirmModal('deleteSource', idx)">✖</button>
                             </div>
