@@ -59,8 +59,9 @@ export const layoutTemplate = `
         </div>
 
         <div v-else>
-            <button v-if="isAuth" class="btn btn-primary floating-save-btn position-fixed bottom-0 end-0 m-4" @click="saveData" title="保存">💾</button>
-            <button v-show="showBackToTop" class="btn floating-top-btn position-fixed end-0 m-4" style="bottom: 110px;" @click="scrollToTop" title="回到顶部">⬆️</button>
+            <button v-if="isAuth" class="floating-btn btn-save-pos" @click="saveData" title="保存变更">💾</button>
+            
+            <button v-show="showBackToTop" class="floating-btn btn-top-pos" @click="scrollToTop" title="回到顶部">⬆️</button>
 
             <div v-if="isAuth" class="card p-3 mb-4 shadow-sm">
                 <div class="d-flex gap-2 flex-wrap">

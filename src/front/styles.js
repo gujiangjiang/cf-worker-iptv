@@ -8,7 +8,7 @@ export const cssContent = `
     .container { max-width: 1300px; }
     #app { padding-top: 85px; } 
 
-    /* 新增：固定页眉样式 */
+    /* 固定页眉样式 */
     .fixed-header {
         position: fixed;
         top: 0;
@@ -17,6 +17,7 @@ export const cssContent = `
         height: 70px;
         background-color: rgba(248, 249, 250, 0.90); /* 微透明背景 */
         backdrop-filter: blur(10px); /* 毛玻璃特效 */
+        -webkit-backdrop-filter: blur(10px);
         box-shadow: 0 1px 10px rgba(0,0,0,0.08);
         z-index: 1030; /* 层级高于内容，低于 Modal/Toast */
         display: flex;
@@ -34,22 +35,59 @@ export const cssContent = `
     /* 修复：将 Toast 层级提升到最高，超过播放器的 3000 */
     .toast-container { z-index: 9999 !important; }
     
-    /* 保存浮动按钮 */
-    .floating-save-btn { width: 60px; height: 60px; font-size: 26px; border-radius: 50%; box-shadow: 0 4px 15px rgba(0,0,0,0.3); z-index: 1030; display: flex; align-items: center; justify-content: center; transition: transform 0.2s; }
-    .floating-save-btn:hover { transform: scale(1.1); }
-
-    /* 新增：回到顶部浮动按钮 (位置在保存按钮上方) */
-    .floating-top-btn { 
-        width: 50px; height: 50px; font-size: 20px; 
-        border-radius: 50%; 
-        box-shadow: 0 4px 15px rgba(0,0,0,0.2); 
-        z-index: 1020; 
-        display: flex; align-items: center; justify-content: center; 
-        transition: all 0.3s; 
-        background-color: #fff; color: #6c757d; border: 1px solid #dee2e6;
-        opacity: 0.9;
+    /* --- 统一浮动按钮样式 (基础结构) --- */
+    .floating-btn {
+        width: 50px;
+        height: 50px;
+        font-size: 22px;
+        border-radius: 50%;
+        position: fixed;
+        right: 35px; /* 统一右侧距离 */
+        z-index: 1030;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        outline: none;
+        
+        /* 磨砂玻璃核心效果 (背景色由具体类定义) */
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        
+        transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+        cursor: pointer;
     }
-    .floating-top-btn:hover { transform: scale(1.1); background-color: #f8f9fa; color: #0d6efd; opacity: 1; }
+    
+    .floating-btn:hover {
+        transform: translateY(-5px) scale(1.05);
+    }
+
+    /* --- 保存按钮 (蓝色系磨砂) --- */
+    .btn-save-pos {
+        bottom: 40px;
+        color: #0d6efd; /* 蓝色图标 */
+        background: rgba(13, 110, 253, 0.2); /* 蓝色微透背景 */
+        border: 1px solid rgba(13, 110, 253, 0.3); /* 蓝色微透边框 */
+        box-shadow: 0 8px 32px 0 rgba(13, 110, 253, 0.15);
+    }
+    .btn-save-pos:hover {
+        background: rgba(13, 110, 253, 0.35); /* 悬停加深 */
+        box-shadow: 0 12px 40px 0 rgba(13, 110, 253, 0.25);
+        color: #0a58ca;
+    }
+
+    /* --- 回到顶部按钮 (深灰色系磨砂) --- */
+    .btn-top-pos {
+        bottom: 105px; 
+        color: #212529; /* 深色图标 */
+        background: rgba(33, 37, 41, 0.15); /* 深色微透背景 */
+        border: 1px solid rgba(33, 37, 41, 0.25); /* 深色微透边框 */
+        box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.1);
+    }
+    .btn-top-pos:hover {
+        background: rgba(33, 37, 41, 0.25); /* 悬停加深 */
+        box-shadow: 0 12px 40px 0 rgba(0, 0, 0, 0.15);
+        color: #000;
+    }
 
     /* 模态框美化 */
     .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.5); z-index: 1060; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(3px); }
