@@ -37,10 +37,10 @@ export const dataContent = `
     epgSortableInstance: null,
 
     // 播放器状态
-    hlsInstance: null, // hls.js 实例
-    playingUrl: '',    // 当前播放地址
-    playingName: '',   // 当前播放频道名
-    playingChannel: null, // 当前播放的完整频道对象
+    hlsInstance: null, 
+    playingUrl: '',    
+    playingName: '',   
+    playingChannel: null, 
 
     modals: {
         login: false,           
@@ -51,7 +51,7 @@ export const dataContent = `
         groupChannelAdder: false,
         groupViewer: false,
         player: false,
-        import: false           // 新增：导入模态框
+        import: false           
     },
 
     groupAdderData: {
@@ -90,11 +90,14 @@ export const dataContent = `
     
     newGroupInput: '',
     
+    // 冲突处理状态更新
     conflictModal: {
         show: false,
         queue: [], 
-        currentItem: null, 
-        existingIndex: -1, 
+        currentItem: null, // 新导入的频道对象
+        existingIndex: -1, // 已存在频道的索引
+        matchType: 'exact', // 'exact' (完全匹配) | 'fuzzy' (模糊/疑似匹配)
+        suggestedName: '', // 疑似匹配时，推荐合并到的目标名称
         action: 'merge', 
         mergedUrls: [], 
         selectedPrimary: '' 
