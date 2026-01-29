@@ -19,7 +19,7 @@ export const cssContent = `
     /* 模态框美化 */
     .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.5); z-index: 1060; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(3px); }
     
-    /* 修改：大幅提升确认弹窗层级，确保覆盖所有编辑窗口 */
+    /* 确认弹窗层级 */
     .confirm-modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.6); z-index: 1200; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(2px); }
 
     .modal-content { border: none; border-radius: 12px; box-shadow: 0 15px 40px rgba(0,0,0,0.25); background-color: #fff; overflow: hidden; }
@@ -63,4 +63,7 @@ export const cssContent = `
     .badge-src { font-size: 0.75rem; margin-left: auto; padding: 4px 8px; border-radius: 6px; }
     .badge-old { background: #6c757d; color: white; }
     .badge-new { background: #0d6efd; color: white; }
+
+    /* 页脚链接悬停效果 (新增) */
+    .hover-link:hover { color: #0d6efd !important; text-decoration: underline !important; }
 `;

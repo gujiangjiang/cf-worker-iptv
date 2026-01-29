@@ -1,6 +1,6 @@
 /**
  * 组件：主页面布局
- * 包含：Toast、Header、登录页、主列表、Loading
+ * 包含：Toast、Header、登录页、主列表、页脚、Loading
  */
 export const layoutTemplate = `
     <div class="toast-container position-fixed top-0 start-50 translate-middle-x p-3">
@@ -96,6 +96,18 @@ export const layoutTemplate = `
                 </div>
             </div>
         </div>
+        
+        <footer class="text-center text-muted mt-5 mb-3 small user-select-none">
+            <p class="mb-1">
+                Powered by 
+                <a href="https://github.com/gujiangjiang/cf-worker-iptv" target="_blank" class="text-decoration-none text-secondary fw-bold hover-link">
+                    Cloudflare Worker IPTV Manager
+                </a>
+            </p>
+            <p class="mb-0 opacity-75">
+                本项目开源免费，仅供学习与技术交流使用
+            </p>
+        </footer>
     </div>
     
     <div v-if="loading" class="loading-overlay"><div class="spinner-border text-primary"></div></div>
