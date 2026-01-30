@@ -168,6 +168,13 @@ export const cssContent = `
 
     .hover-link:hover { color: #0d6efd !important; text-decoration: underline !important; }
 
+    /* 播放器模态框响应式主体 (配合 JS 移除 inline style) */
+    .player-responsive-body {
+        padding: 0; display: flex; justify-content: center; align-items: center; 
+        background: #000; position: relative;
+        min-height: 400px; /* 默认桌面高度 */
+    }
+
     @media (max-width: 768px) {
         #app { padding-top: 70px; }
         .fixed-header { height: 60px; }
@@ -175,5 +182,29 @@ export const cssContent = `
         .btn-save-pos { bottom: 25px; }
         .btn-top-pos { bottom: 80px; }
         .logo-preview-box { width: 60px; height: 45px; }
+    }
+
+    /* 移动端模态框深度优化 (小尺寸模式) */
+    @media (max-width: 576px) {
+        /* 强制模态框左右边距变小，利用屏幕宽度 */
+        .modal-dialog {
+            margin: 0.5rem;
+            max-width: calc(100% - 1rem) !important;
+        }
+        /* 减小内边距，增加内容可用空间 */
+        .modal-body {
+            padding: 1rem;
+        }
+        
+        /* 播放器在手机端降低高度，防止溢出屏幕 */
+        .player-responsive-body {
+            min-height: 240px !important;
+        }
+
+        /* 冲突检测卡片在手机端全宽 */
+        .conflict-card {
+            width: 100% !important;
+            max-width: 100% !important;
+        }
     }
 `;

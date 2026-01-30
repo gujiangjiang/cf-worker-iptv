@@ -128,11 +128,12 @@ export const playerModal = createModal({
     zIndex: 3000,
     size: 'modal-lg',
     
-    // 定制化样式
+    // 定制化样式 (配合 CSS 类实现响应式高度)
     contentClass: 'modal-content bg-dark text-white',
     contentStyle: 'border: 1px solid #444;',
     headerStyle: 'background-color: transparent !important; color: white !important; border-bottom: 0;',
-    bodyStyle: 'padding: 0; display: flex; justify-content: center; align-items: center; min-height: 400px; background: #000; position: relative;',
+    // bodyStyle 已移除，改为使用 bodyClass 配合 CSS
+    bodyClass: 'player-responsive-body', 
     footerStyle: 'background-color: transparent !important; color: white !important; border-top: 1px solid #333; flex-direction: column; align-items: flex-start;',
     
     title: `
