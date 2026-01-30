@@ -23,7 +23,7 @@ const editorBody = `
         </div>
     </div>
 
-    <div class="mb-4 p-3 bg-light rounded border">
+    <div class="mb-4 p-3 bg-body-tertiary rounded border">
         <div class="form-check form-switch mb-2">
             <input class="form-check-input" type="checkbox" id="useLogo" v-model="channelForm.useLogo">
             <label class="form-check-label" for="useLogo">启用频道 Logo</label>
@@ -83,7 +83,7 @@ const groupManagerBody = `
     </div>
     
     <div class="list-group mb-2 border-bottom pb-2">
-        <div class="list-group-item d-flex align-items-center gap-2 bg-light border-0">
+        <div class="list-group-item d-flex align-items-center gap-2 bg-body-tertiary border">
             <span class="text-secondary text-center" style="width: 1.2rem;">🔒</span>
             <span class="flex-grow-1 fw-bold">默认 (未分组)</span>
             <span class="badge bg-secondary rounded-pill">{{ getGroupCount('默认') }}</span>

@@ -8,6 +8,7 @@ export const dataContent = `
     groups: [],
     
     settings: {
+        theme: 'auto', // 新增：主题设置 (auto, light, dark)
         epgs: [], 
         catchup: '',
         catchupSource: '',
@@ -45,7 +46,7 @@ export const dataContent = `
     playingUrl: '',    
     playingName: '',   
     playingChannel: null,
-    playerError: null, // 新增：用于记录播放器错误状态 (如 mixed_content)
+    playerError: null, 
 
     modals: {
         login: false,           
@@ -107,5 +108,7 @@ export const dataContent = `
         manualTargetId: '',    
         mergedUrls: [], 
         selectedPrimary: '' 
-    }
+    },
+    
+    systemThemeMatcher: null // 用于监听系统主题变化
 `;

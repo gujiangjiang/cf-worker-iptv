@@ -8,6 +8,10 @@ export const apiLogic = `
             // 访客接口不需要密码，但也兼容 fetchApi
             const config = await this.fetchApi('/api/guest/config');
             this.publicGuestConfig = config;
+            
+            // 如果后端返回了设置对象，尝试同步主题 (通常 guestConfig 不含 theme，但如果是完整 settings 可以)
+            // 这里我们主要依赖 login 后的完整 settings，访客模式暂时使用默认或上次状态
+            
             if (config.allowViewList) {
                 await this.tryLoadList(); 
             }
@@ -49,6 +53,9 @@ export const apiLogic = `
                 }
             };
             
+            // 登录成功后立即应用远程保存的主题
+            this.applyTheme();
+
             // 3. 处理分组
             let groups = remoteGroups;
             if (!groups || groups.length === 0) {

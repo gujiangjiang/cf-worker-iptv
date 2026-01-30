@@ -21,6 +21,9 @@ export const jsContent = `
             }
         },
         mounted() {
+            // 初始化主题 (优先执行)
+            this.initTheme();
+
             // 初始化：检查是否已登录，或是否允许访客查看
             const savedPwd = localStorage.getItem('iptv_pwd');
             if(savedPwd) {
@@ -38,6 +41,9 @@ export const jsContent = `
         // 最佳实践：组件卸载时移除监听器
         unmounted() {
             window.removeEventListener('scroll', this.handleScroll);
+            if(this.systemThemeMatcher) {
+                this.systemThemeMatcher.removeEventListener('change', this.applyTheme);
+            }
         },
         methods: {
             ${uiMethods},

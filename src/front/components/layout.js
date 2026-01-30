@@ -101,7 +101,7 @@ export const layoutTemplate = `
                 <div class="card-body p-0">
                     <div class="table-responsive">
                         <table class="table table-hover mb-0 align-middle">
-                            <thead class="table-light">
+                            <thead class="bg-body-tertiary">
                                 <tr>
                                     <th v-if="isAuth" style="width: 5%" class="text-center">排序</th>
                                     <th style="width: 5%" class="text-center">序</th>

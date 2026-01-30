@@ -1,6 +1,6 @@
 /**
  * 基础工具函数
- * 包含: ID生成, Toast提示, 密码生成, 通用网络请求, 滚动交互, 剪贴板
+ * 包含: ID生成, Toast提示, 密码生成, 通用网络请求, 滚动交互, 剪贴板, 主题控制
  */
 export const baseUtils = `
     generateId() {
@@ -46,6 +46,26 @@ export const baseUtils = `
             document.body.removeChild(textArea);
             this.showToast('✅ 已复制到剪贴板', 'success');
         }
+    },
+
+    // --- 主题控制逻辑 ---
+    initTheme() {
+        // 监听系统主题变化
+        this.systemThemeMatcher = window.matchMedia('(prefers-color-scheme: dark)');
+        this.systemThemeMatcher.addEventListener('change', () => {
+            if (this.settings.theme === 'auto') this.applyTheme();
+        });
+        // 初始化应用
+        this.applyTheme();
+    },
+
+    applyTheme() {
+        let theme = this.settings.theme || 'auto';
+        if (theme === 'auto') {
+            theme = this.systemThemeMatcher && this.systemThemeMatcher.matches ? 'dark' : 'light';
+        }
+        // 设置 Bootstrap 5.3 的 data-bs-theme 属性
+        document.documentElement.setAttribute('data-bs-theme', theme);
     },
 
     // 通用 API 请求封装

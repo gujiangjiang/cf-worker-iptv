@@ -20,7 +20,7 @@ const settingsBody = `
                 <button class="btn btn-sm btn-outline-danger border-0" @click="removeEpg(idx)">✖</button>
             </div>
         </div>
-        <div v-if="settings.epgs.length === 0" class="text-center text-muted py-2 border rounded border-dashed bg-light small">
+        <div v-if="settings.epgs.length === 0" class="text-center text-muted py-2 border rounded border-dashed bg-body-tertiary small">
             暂无 EPG 源，请点击添加
         </div>
     </div>
@@ -51,7 +51,7 @@ const settingsBody = `
     
     <div class="mt-4">
         <label class="form-label small text-muted">当前配置预览 (M3U 头部标签)</label>
-        <div class="p-3 bg-light border rounded font-monospace small text-break">
+        <div class="p-3 bg-body-tertiary border rounded font-monospace small text-break">
             <div v-if="settings.epgs.filter(e=>e.enabled).length > 0" class="mb-1">
                 x-tvg-url="{{ settings.epgs.filter(e=>e.enabled).map(e=>e.url).join(',') }}"
             </div>
@@ -68,12 +68,27 @@ export const settingsModal = createModal({
     title: '⚙️ M3U 参数设置',
     size: 'modal-lg',
     body: settingsBody,
-    // 修复：改为调用 saveM3uSettings 这一保存方法
     footer: `<button class="btn btn-primary" @click="saveM3uSettings">确认并保存</button>`
 });
 
-// 2. 系统全局设置 (访客权限)
+// 2. 系统全局设置 (访客权限 + 主题)
 const sysSettingsBody = `
+    <h6 class="border-bottom pb-2 mb-3">🎨 主题设置</h6>
+    <div class="d-flex gap-3 mb-4">
+        <div class="form-check">
+            <input class="form-check-input" type="radio" name="themeRadio" value="light" v-model="settings.theme" @change="applyTheme">
+            <label class="form-check-label">☀️ 日间模式</label>
+        </div>
+        <div class="form-check">
+            <input class="form-check-input" type="radio" name="themeRadio" value="dark" v-model="settings.theme" @change="applyTheme">
+            <label class="form-check-label">🌙 夜间模式</label>
+        </div>
+        <div class="form-check">
+            <input class="form-check-input" type="radio" name="themeRadio" value="auto" v-model="settings.theme" @change="applyTheme">
+            <label class="form-check-label">🤖 跟随系统</label>
+        </div>
+    </div>
+
     <h6 class="border-bottom pb-2 mb-3">👤 访客权限控制</h6>
     
     <div class="form-check form-switch mb-3">
@@ -83,7 +98,7 @@ const sysSettingsBody = `
         </label>
     </div>
 
-    <div class="card p-3 mb-3 bg-light border-0">
+    <div class="card p-3 mb-3 border-0 bg-body-tertiary">
         <div class="form-check form-switch mb-0">
             <input class="form-check-input" type="checkbox" id="allowSub" v-model="settings.guestConfig.allowSub">
             <label class="form-check-label fw-bold" for="allowSub">
@@ -92,7 +107,7 @@ const sysSettingsBody = `
         </div>
         
         <div v-if="!settings.guestConfig.allowSub" class="mt-3 ps-2 border-start border-3 border-primary">
-            <label class="form-label small text-dark fw-bold">🔐 独立订阅密码 (Token)</label>
+            <label class="form-label small fw-bold">🔐 独立订阅密码 (Token)</label>
             <div class="input-group input-group-sm">
                 <input :type="showSubPass ? 'text' : 'password'" class="form-control" v-model="settings.subPassword" placeholder="为空则默认使用管理员密码">
                 <button class="btn btn-outline-secondary" type="button" @click="showSubPass = !showSubPass" title="显示/隐藏密码">
@@ -106,7 +121,7 @@ const sysSettingsBody = `
         </div>
 
         <div v-else class="mt-3 ps-2 border-start border-3 border-success">
-            <label class="form-label small text-dark fw-bold">允许公开导出的格式</label>
+            <label class="form-label small fw-bold">允许公开导出的格式</label>
             <div class="d-flex gap-3">
                 <div class="form-check">
                     <input class="form-check-input" type="checkbox" value="m3u" v-model="settings.guestConfig.allowFormats">
