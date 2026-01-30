@@ -141,4 +141,19 @@ export const cssContent = `
 
     /* 页脚链接悬停效果 */
     .hover-link:hover { color: #0d6efd !important; text-decoration: underline !important; }
+
+    /* --- 移动端适配 (Max Width 768px) --- */
+    @media (max-width: 768px) {
+        #app { padding-top: 70px; } /* 减少顶部 padding */
+        
+        .fixed-header { height: 60px; } /* 减小页眉高度 */
+        
+        /* 浮动按钮变小一点，位置靠边一点 */
+        .floating-btn { width: 42px; height: 42px; font-size: 18px; right: 15px; }
+        .btn-save-pos { bottom: 25px; }
+        .btn-top-pos { bottom: 80px; }
+        
+        /* 调整 Logo 预览大小防止溢出 */
+        .logo-preview-box { width: 60px; height: 45px; }
+    }
 `;

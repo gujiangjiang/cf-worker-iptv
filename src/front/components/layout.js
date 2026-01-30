@@ -10,13 +10,16 @@ export const layoutTemplate = `
     </div>
 
     <div class="fixed-header">
-        <div class="container d-flex justify-content-between align-items-center">
-            <h3 class="m-0 fs-4">📺 IPTV 直播源管理</h3>
+        <div class="container d-flex justify-content-between align-items-center px-3">
+            <h3 class="m-0 fs-5 fs-md-4 text-nowrap">
+                📺 <span class="d-none d-sm-inline">IPTV 直播源管理</span>
+                <span class="d-inline d-sm-none fw-bold">IPTV</span>
+            </h3>
             
             <div class="d-flex gap-2">
                 <div class="dropdown" v-if="isAuth || publicGuestConfig.allowSub">
                     <button class="btn btn-outline-primary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                        📡 订阅 / 导出
+                        📡 <span class="d-none d-md-inline">订阅 / 导出</span>
                     </button>
                     <ul class="dropdown-menu">
                         <li v-if="isAuth || (publicGuestConfig.allowSub && publicGuestConfig.allowFormats.includes('m3u'))">
@@ -40,10 +43,17 @@ export const layoutTemplate = `
                     </ul>
                 </div>
                 
-                <button v-if="!isAuth" class="btn btn-dark" @click="openLoginModal">🔐 后台管理</button>
+                <button v-if="!isAuth" class="btn btn-dark" @click="openLoginModal">
+                    🔐 <span class="d-none d-md-inline">后台管理</span>
+                </button>
                 
-                <button v-if="isAuth" class="btn btn-secondary" @click="openSystemSettings" title="系统设置">🛠️ 系统设置</button>
-                <button v-if="isAuth" class="btn btn-outline-danger" @click="logout" title="退出登录">退出</button>
+                <button v-if="isAuth" class="btn btn-secondary" @click="openSystemSettings" title="系统设置">
+                    🛠️ <span class="d-none d-md-inline">设置</span>
+                </button>
+                <button v-if="isAuth" class="btn btn-outline-danger" @click="logout" title="退出登录">
+                    <span class="d-none d-md-inline">退出</span>
+                    <span class="d-inline d-md-none">👋</span>
+                </button>
             </div>
         </div>
     </div>
@@ -66,19 +76,19 @@ export const layoutTemplate = `
             <div v-if="isAuth" class="card p-3 mb-4 shadow-sm">
                 <div class="d-flex gap-2 flex-wrap">
                     <button class="btn btn-success flex-grow-1" @click="openImportModal">
-                        <span class="fs-5 d-block">📥</span> 导入直播源
+                        <span class="fs-5 d-block">📥</span> <span class="d-none d-sm-inline">导入直播源</span><span class="d-inline d-sm-none">导入</span>
                     </button>
                     <button class="btn btn-info text-white flex-grow-1" @click="openGroupManager">
-                        <span class="fs-5 d-block">📁</span> 分组管理
+                        <span class="fs-5 d-block">📁</span> <span class="d-none d-sm-inline">分组管理</span><span class="d-inline d-sm-none">分组</span>
                     </button>
                     <button class="btn btn-secondary flex-grow-1" @click="openSettingsModal">
-                        <span class="fs-5 d-block">⚙️</span> 参数设置
+                        <span class="fs-5 d-block">⚙️</span> <span class="d-none d-sm-inline">参数设置</span><span class="d-inline d-sm-none">参数</span>
                     </button>
                     <button class="btn btn-danger flex-grow-1" @click="openConfirmModal('clearAll')">
-                        <span class="fs-5 d-block">🗑️</span> 清空列表
+                        <span class="fs-5 d-block">🗑️</span> <span class="d-none d-sm-inline">清空列表</span><span class="d-inline d-sm-none">清空</span>
                     </button>
                     <button class="btn btn-primary flex-grow-1" @click="saveData">
-                        <span class="fs-5 d-block">💾</span> 保存变更
+                        <span class="fs-5 d-block">💾</span> <span class="d-none d-sm-inline">保存变更</span><span class="d-inline d-sm-none">保存</span>
                     </button>
                 </div>
             </div>
@@ -86,7 +96,7 @@ export const layoutTemplate = `
             <div class="card shadow-sm">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <span>频道列表 ({{ channels.length }})</span>
-                    <button v-if="isAuth" class="btn btn-sm btn-primary" @click="openAddChannelModal">+ 新增频道</button>
+                    <button v-if="isAuth" class="btn btn-sm btn-primary" @click="openAddChannelModal">+ <span class="d-none d-sm-inline">新增频道</span><span class="d-inline d-sm-none">新增</span></button>
                 </div>
                 <div class="card-body p-0">
                     <div class="table-responsive">
