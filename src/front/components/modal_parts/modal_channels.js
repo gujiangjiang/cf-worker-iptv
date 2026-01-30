@@ -97,10 +97,10 @@ const groupManagerBody = `
                 <span class="group-drag-handle">⠿</span>
                 <span class="flex-grow-1 text-truncate">{{ g }}</span>
                 <span class="badge bg-secondary rounded-pill">{{ getGroupCount(g) }}</span>
-                <button class="btn btn-sm btn-outline-primary border-0" @click="startEditGroup(idx)" title="重命名">✏️</button>
+                <button class="btn btn-sm btn-outline-primary" @click="startEditGroup(idx)" title="重命名">✏️</button>
                 <button class="btn btn-sm btn-outline-info text-nowrap ms-1" @click="viewGroupChannels(g)" title="查看频道">👁️</button>
                 <button class="btn btn-sm btn-outline-success text-nowrap" @click="openGroupChannelAdder(g)" title="从默认分组批量添加频道">➕</button>
-                <button class="btn btn-sm btn-outline-danger border-0" @click="openConfirmModal('deleteGroup', idx)">✖</button>
+                <button class="btn btn-sm btn-outline-danger ms-1" @click="openConfirmModal('deleteGroup', idx)">✖</button>
             </div>
             
             <div v-else class="d-flex align-items-center gap-2 w-100 bg-light p-1 rounded">
