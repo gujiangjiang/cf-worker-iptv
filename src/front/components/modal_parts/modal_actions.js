@@ -9,8 +9,7 @@ export const loginModal = createModal({
     closeAction: 'modals.login = false',
     title: '🔐 后台管理登录',
     zIndex: 2000,
-    dialogClass: 'modal-dialog', // 默认尺寸
-    // 这里手动加 style 来限制宽度，模拟原本的 style="max-width: 400px"
+    dialogClass: 'modal-dialog', 
     contentStyle: 'max-width: 400px; margin: 0 auto;', 
     body: `
         <div class="mb-3">
@@ -65,7 +64,6 @@ export const confirmModal = createModal({
     closeAction: 'confirmModal.show = false',
     title: '{{ confirmModal.title }}',
     overlayClass: 'confirm-modal-overlay', // 特殊遮罩样式
-    // 动态 header 颜色
     headerDynamicClass: "confirmModal.type === 'danger' ? 'bg-danger-subtle' : ''",
     body: confirmBody,
     footer: `
@@ -74,9 +72,27 @@ export const confirmModal = createModal({
     `
 });
 
-// 4. 播放器模态框 (高度定制)
+// 4. 播放器模态框 (深度优化)
 const playerBody = `
-    <video id="video-player" controls style="width: 100%; max-height: 70vh; outline: none;" autoplay></video>
+    <div style="position: relative; width: 100%; height: 100%;">
+        <video id="video-player" controls style="width: 100%; max-height: 70vh; outline: none;" autoplay></video>
+        
+        <div v-if="playerError === 'mixed_content'" class="position-absolute top-50 start-50 translate-middle text-center p-4 rounded" style="background: rgba(0,0,0,0.85); width: 80%; backdrop-filter: blur(5px);">
+            <div class="fs-1 mb-3">🛡️</div>
+            <h5 class="text-white mb-2">播放被浏览器拦截</h5>
+            <p class="text-white-50 small mb-3">
+                当前页面为 HTTPS 安全协议，但直播源是 HTTP 协议。<br>
+                浏览器默认禁止此类“混合内容”请求。
+            </p>
+            <div class="d-grid gap-2 col-10 mx-auto">
+                <button class="btn btn-sm btn-outline-light" @click="forceHttpsPlay">尝试强制 HTTPS 播放</button>
+                <div class="text-warning small mt-2 border border-warning rounded p-2 text-start">
+                    <strong>📢 解决方法：</strong><br>
+                    请点击浏览器地址栏左侧的 🔒 图标 -> 网站设置 -> 将“不安全内容”设为“允许”，然后刷新页面。
+                </div>
+            </div>
+        </div>
+    </div>
 `;
 
 const playerFooter = `
@@ -88,8 +104,22 @@ const playerFooter = `
             </option>
         </select>
     </div>
-    <small class="text-white-50 text-truncate w-100 font-monospace mb-1">正在播放: {{ playingUrl }}</small>
-    <small class="text-warning" style="font-size: 0.75rem;">提示: 如无法播放，可能是因为源地址是 HTTP 而当前页面是 HTTPS (混合内容限制)，请尝试允许浏览器加载不安全内容。</small>
+    
+    <div class="d-flex align-items-center justify-content-between w-100 gap-2">
+        <small class="text-white-50 text-truncate font-monospace flex-grow-1" :title="playingUrl">{{ playingUrl }}</small>
+        
+        <button v-if="playingUrl.startsWith('http:') && !playingUrl.startsWith('https:')" class="btn btn-sm btn-outline-warning text-nowrap" @click="forceHttpsPlay" title="尝试把 URL 改为 https">
+            转 HTTPS
+        </button>
+        
+        <button class="btn btn-sm btn-light text-nowrap" @click="copyToClipboard(playingUrl)" title="复制直播源链接">
+            📋 复制
+        </button>
+    </div>
+    
+    <small v-if="!playerError" class="text-white-50 mt-2 w-100 text-start" style="font-size: 0.75rem;">
+        💡 提示: 如果一直加载失败，请点击右侧“复制”按钮，使用 PotPlayer 等本地播放器播放。
+    </small>
 `;
 
 export const playerModal = createModal({
@@ -102,8 +132,8 @@ export const playerModal = createModal({
     contentClass: 'modal-content bg-dark text-white',
     contentStyle: 'border: 1px solid #444;',
     headerStyle: 'background-color: transparent !important; color: white !important; border-bottom: 0;',
-    bodyStyle: 'padding: 0; display: flex; justify-content: center; align-items: center; min-height: 400px; background: #000;',
-    footerStyle: 'background-color: transparent !important; color: white !important; border-top: 0; flex-direction: column; align-items: flex-start;',
+    bodyStyle: 'padding: 0; display: flex; justify-content: center; align-items: center; min-height: 400px; background: #000; position: relative;',
+    footerStyle: 'background-color: transparent !important; color: white !important; border-top: 1px solid #333; flex-direction: column; align-items: flex-start;',
     
     title: `
         <span class="badge bg-danger me-2 animate-pulse">LIVE</span>
@@ -113,7 +143,7 @@ export const playerModal = createModal({
     footer: playerFooter
 });
 
-// 5. 冲突解决模态框 (定制 Header)
+// 5. 冲突解决模态框
 const conflictBody = `
     <div v-if="conflictModal.matchType === 'fuzzy'" class="alert alert-warning py-2 mb-3 small">
         <strong>名称相似检测：</strong><br>
@@ -173,7 +203,6 @@ export const conflictModal = createModal({
     condition: 'conflictModal.show',
     closeAction: 'cancelConflict',
     zIndex: 2000,
-    // 动态 header 样式：重复为红，疑似为黄
     headerDynamicClass: "conflictModal.matchType === 'fuzzy' ? 'bg-warning-subtle text-dark' : 'bg-danger-subtle text-danger'",
     title: `
         <div class="d-flex align-items-center gap-2 overflow-hidden">
@@ -184,8 +213,7 @@ export const conflictModal = createModal({
     `,
     body: conflictBody,
     bodyStyle: 'max-height: 70vh; overflow-y: auto;',
-    // 冲突框使用自定义的外壳 class
     contentClass: 'conflict-card', 
-    dialogClass: '', // 移除默认的 modal-dialog，因为 conflict-card 自带宽度样式
+    dialogClass: '', 
     overlayClass: 'modal-overlay' 
 });

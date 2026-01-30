@@ -28,7 +28,7 @@ export const dataContent = `
     catchupMode: 'custom', 
     showSubPass: false,
     
-    // 新增：控制回到顶部按钮的显示状态
+    // 控制回到顶部按钮的显示状态
     showBackToTop: false,
 
     toast: { show: false, message: '', type: 'success' },
@@ -44,7 +44,8 @@ export const dataContent = `
     hlsInstance: null, 
     playingUrl: '',    
     playingName: '',   
-    playingChannel: null, 
+    playingChannel: null,
+    playerError: null, // 新增：用于记录播放器错误状态 (如 mixed_content)
 
     modals: {
         login: false,           
@@ -102,8 +103,8 @@ export const dataContent = `
         matchType: 'exact', 
         suggestedName: '', 
         action: 'merge', 
-        manualTargetIndex: -1, // 已废弃，保留兼容，逻辑切换为 manualTargetId
-        manualTargetId: '',    // 新增：使用 ID 绑定手动目标
+        manualTargetIndex: -1, 
+        manualTargetId: '',    
         mergedUrls: [], 
         selectedPrimary: '' 
     }

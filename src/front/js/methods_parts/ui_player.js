@@ -8,6 +8,7 @@ export const playerMethods = `
         
         this.playingChannel = channel;
         this.playingName = channel.name;
+        this.playerError = null; // 重置错误状态
 
         const primarySource = validSources.find(s => s.isPrimary) || validSources[0];
         this.playingUrl = primarySource.url;
@@ -19,7 +20,17 @@ export const playerMethods = `
     switchPlayerSource(url) {
         if (url === this.playingUrl) return;
         this.playingUrl = url;
+        this.playerError = null; // 切换源时重置错误
         this.$nextTick(() => { this.initHlsPlayer(); });
+    },
+
+    // 新增：尝试强制 HTTPS 播放
+    forceHttpsPlay() {
+        if (this.playingUrl.startsWith('http:')) {
+            const newUrl = this.playingUrl.replace(/^http:/, 'https:');
+            this.switchPlayerSource(newUrl);
+            this.showToast('正在尝试使用 HTTPS 协议...', 'info');
+        }
     },
 
     initHlsPlayer() {
@@ -39,10 +50,22 @@ export const playerMethods = `
             hls.on(Hls.Events.MANIFEST_PARSED, function() {
                 video.play().catch(e => console.log('Auto-play prevented:', e));
             });
+            
+            // 增强的错误处理
             hls.on(Hls.Events.ERROR, (event, data) => {
                 if (data.fatal) {
                     console.error('HLS Error:', data);
-                    this.showToast('播放出错: ' + data.details, 'error');
+                    
+                    // 检测混合内容错误 (HTTPS 页面加载 HTTP 资源)
+                    if (data.details === 'manifestLoadError' && 
+                        window.location.protocol === 'https:' && 
+                        this.playingUrl.startsWith('http:')) {
+                        
+                        this.playerError = 'mixed_content';
+                        this.showToast('播放失败: 浏览器拦截了 HTTP 直播源', 'error');
+                    } else {
+                        this.showToast('播放出错: ' + data.details, 'error');
+                    }
                 }
             });
         } 
@@ -65,5 +88,6 @@ export const playerMethods = `
         }
         this.playingUrl = '';
         this.playingChannel = null;
+        this.playerError = null;
     },
 `;
