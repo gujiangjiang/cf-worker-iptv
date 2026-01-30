@@ -96,6 +96,10 @@ export const dataContent = `
     
     newGroupInput: '',
     
+    // 分组重命名相关状态
+    editingGroupIndex: -1,
+    editGroupInput: '',
+
     conflictModal: {
         show: false,
         queue: [], 

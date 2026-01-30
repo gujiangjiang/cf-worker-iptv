@@ -92,13 +92,22 @@ const groupManagerBody = `
     </div>
 
     <ul class="list-group" id="group-list-container" style="max-height: 400px; overflow-y: auto;">
-        <li class="list-group-item d-flex align-items-center gap-2" v-for="(g, idx) in groups" :key="g">
-            <span class="group-drag-handle">⠿</span>
-            <span class="flex-grow-1 text-truncate">{{ g }}</span>
-            <span class="badge bg-secondary rounded-pill">{{ getGroupCount(g) }}</span>
-            <button class="btn btn-sm btn-outline-info text-nowrap ms-1" @click="viewGroupChannels(g)" title="查看频道">👁️</button>
-            <button class="btn btn-sm btn-outline-success text-nowrap" @click="openGroupChannelAdder(g)" title="从默认分组批量添加频道">➕</button>
-            <button class="btn btn-sm btn-outline-danger border-0" @click="openConfirmModal('deleteGroup', idx)">✖</button>
+        <li class="list-group-item" v-for="(g, idx) in groups" :key="g">
+            <div v-if="editingGroupIndex !== idx" class="d-flex align-items-center gap-2 w-100">
+                <span class="group-drag-handle">⠿</span>
+                <span class="flex-grow-1 text-truncate">{{ g }}</span>
+                <span class="badge bg-secondary rounded-pill">{{ getGroupCount(g) }}</span>
+                <button class="btn btn-sm btn-outline-primary border-0" @click="startEditGroup(idx)" title="重命名">✏️</button>
+                <button class="btn btn-sm btn-outline-info text-nowrap ms-1" @click="viewGroupChannels(g)" title="查看频道">👁️</button>
+                <button class="btn btn-sm btn-outline-success text-nowrap" @click="openGroupChannelAdder(g)" title="从默认分组批量添加频道">➕</button>
+                <button class="btn btn-sm btn-outline-danger border-0" @click="openConfirmModal('deleteGroup', idx)">✖</button>
+            </div>
+            
+            <div v-else class="d-flex align-items-center gap-2 w-100 bg-light p-1 rounded">
+                <input type="text" class="form-control form-control-sm" v-model="editGroupInput" @keyup.enter="saveGroupRename(idx)" ref="groupEditInput">
+                <button class="btn btn-sm btn-success text-nowrap" @click="saveGroupRename(idx)">保存</button>
+                <button class="btn btn-sm btn-secondary text-nowrap" @click="cancelEditGroup">取消</button>
+            </div>
         </li>
     </ul>
     <div class="mt-3 text-end">

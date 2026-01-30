@@ -5,6 +5,7 @@ export const modalMethods = `
     // --- 分组逻辑 ---
     openGroupManager() {
         this.modals.groupManager = true;
+        this.editingGroupIndex = -1; // 重置编辑状态
         this.$nextTick(() => this.initGroupSortable());
     },
     addGroup() {
@@ -14,6 +15,45 @@ export const modalMethods = `
         if(this.groups.includes(val)) return this.showToast('分组已存在', 'error');
         this.groups.push(val);
         this.newGroupInput = '';
+        this.sortChannelsByGroup();
+    },
+    // 开始编辑分组名称
+    startEditGroup(index) {
+        this.editingGroupIndex = index;
+        this.editGroupInput = this.groups[index];
+    },
+    // 取消编辑
+    cancelEditGroup() {
+        this.editingGroupIndex = -1;
+        this.editGroupInput = '';
+    },
+    // 保存重命名
+    saveGroupRename(index) {
+        const oldName = this.groups[index];
+        const newName = this.editGroupInput.trim();
+        
+        if (!newName) return this.showToast('分组名称不能为空', 'warning');
+        if (newName === oldName) {
+            this.cancelEditGroup();
+            return;
+        }
+        if (newName === '默认') return this.showToast('无法重命名为系统保留名称', 'error');
+        if (this.groups.includes(newName)) return this.showToast('该分组名称已存在', 'error');
+
+        // 1. 更新分组列表
+        this.groups[index] = newName;
+
+        // 2. 同步更新所有该分组下的频道
+        let updateCount = 0;
+        this.channels.forEach(ch => {
+            if (ch.group === oldName) {
+                ch.group = newName;
+                updateCount++;
+            }
+        });
+
+        this.showToast(\`分组重命名成功，已同步更新 \${updateCount} 个频道\`, 'success');
+        this.cancelEditGroup();
         this.sortChannelsByGroup();
     },
     removeGroup(index) {
