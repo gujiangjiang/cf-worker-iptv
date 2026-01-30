@@ -63,6 +63,7 @@ export const confirmModal = createModal({
     condition: 'confirmModal.show',
     closeAction: 'confirmModal.show = false',
     title: '{{ confirmModal.title }}',
+    zIndex: 3500, // 修复: 提升层级至最高，确保在编辑器(1100)、登录框(2000)、播放器(3000)之上
     overlayClass: 'confirm-modal-overlay', // 特殊遮罩样式
     headerDynamicClass: "confirmModal.type === 'danger' ? 'bg-danger-subtle' : ''",
     body: confirmBody,
