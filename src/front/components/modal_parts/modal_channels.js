@@ -162,6 +162,7 @@ export const groupViewerModal = createModal({
     closeAction: 'modals.groupViewer = false',
     title: '📂 {{ groupViewerData.groupName }} ({{ groupViewerData.list.length }})',
     zIndex: 1090,
+    size: 'modal-lg', // 优化：桌面端加宽显示
     body: groupViewerBody,
     bodyStyle: 'padding: 0;',
     footer: `<button class="btn btn-primary" @click="modals.groupViewer = false">关闭</button>`
