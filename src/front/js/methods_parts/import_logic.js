@@ -128,9 +128,12 @@ export const importLogic = `
             if (prettyName && prettyName !== ch.name) ch.name = prettyName;
             if (prettyTvg && prettyTvg !== ch.tvgName) ch.tvgName = prettyTvg;
 
-            // 4K 频道特殊优化：CCTV/卫视的 4K 频道保留独立显示 (Name含4K)，但 EPG 去掉 4K 以匹配通用数据
-            if (/(?:CCTV|卫视).*?4K/i.test(ch.name)) {
-                 ch.tvgName = ch.tvgName.replace(/\\s*4K/gi, '').trim();
+            // 4K/8K 逻辑优化：
+            // 1. 如果是 "CCTV1 4K" (带空格)，视为普通频道高清版 -> EPG 去掉 4K (变成 CCTV1)
+            // 2. 如果是 "CCTV4K" (连着)，视为独立频道 -> EPG 保留 4K (保持 CCTV4K)
+            // 这里的正则 \\s+(4K|8K) 强制要求 4K/8K 前必须有空白字符
+            if (/\\s+(4K|8K)/i.test(ch.name)) {
+                 ch.tvgName = ch.tvgName.replace(/\\s+(4K|8K)/gi, '').trim();
             }
 
             const key = this.cleanChannelName(ch.name) || this.normalizeName(ch.name); 
