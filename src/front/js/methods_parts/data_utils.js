@@ -23,7 +23,7 @@ export const dataUtils = `
         s = s.replace(/(?:[\\s-_]|^)(?:MAX)?\\d+(?:\\.\\d+)?M(?:\\d+)?(?:HDR|HEVC|H\\.26[45])?/gi, '');
         s = s.replace(/\\s+\\d{3,4}[\\*x]\\d{3,4}/g, '');
         s = s.replace(/(?:[\\s-_]|^)(?:576|720|1080|1440|2160|4320|8192)[IP]?/gi, '');
-        s = s.replace(/\\s+(4K|8K)(?:\\b|$)/gi, '');
+        // 移除: s = s.replace(/\\s+(4K|8K)(?:\\b|$)/gi, ''); // 已移除，以保留 4K 频道作为独立频道
         s = s.replace(/(?:[\\s-_]|^)(F?HD|SD|HEVC|HDR|H\\.26[45]|FPS\\d+)/gi, ''); 
         return s.trim();
     },
